@@ -72,6 +72,26 @@ class User {
         return $stmt->execute(["is_suspended" => $is_suspended ? 'true' : 'false', "user_id" => $user_id]);
     }
 
+    // Hard-delete a user. The DB schema uses ON DELETE CASCADE / SET NULL on
+    // child tables (conversations, orders, posts, notifications, etc.) so the
+    // row can be removed cleanly. Admin accounts are protected — an admin
+    // cannot delete themselves or another admin this way.
+    public function delete(int $user_id, int $requesting_admin_id): bool {
+        if ($user_id === $requesting_admin_id) {
+            return false; // can't delete yourself
+        }
+        // Guard: never delete another admin.
+        $check = $this->pdo->prepare("SELECT role FROM users WHERE user_id = :id");
+        $check->execute(["id" => $user_id]);
+        $target = $check->fetch();
+        if (!$target || $target['role'] === 'admin') {
+            return false;
+        }
+        $stmt = $this->pdo->prepare("DELETE FROM users WHERE user_id = :user_id");
+        $stmt->execute(["user_id" => $user_id]);
+        return $stmt->rowCount() === 1;
+    }
+
     // Admin user list
     public function getAll() {
         $sql = "SELECT * FROM users ORDER BY user_id";

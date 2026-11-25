@@ -7,17 +7,34 @@ require_role('admin');
 
 $pdo = (new Database())->connect();
 $userModel = new User($pdo);
+$admin_id = (int) $_SESSION['user_id'];
 
+$flash = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user_id = (int) ($_POST['user_id'] ?? 0);
-    $is_suspended = ($_POST['action'] ?? '') === 'suspend';
-    $userModel->setSuspended($user_id, $is_suspended);
+    $action  = $_POST['action'] ?? '';
+
+    if ($action === 'suspend') {
+        $userModel->setSuspended($user_id, true);
+        $flash = 'User suspended.';
+    } elseif ($action === 'unsuspend') {
+        $userModel->setSuspended($user_id, false);
+        $flash = 'User unsuspended.';
+    } elseif ($action === 'delete') {
+        $ok = $userModel->delete($user_id, $admin_id);
+        $flash = $ok ? 'User deleted.' : 'Could not delete that user (admins are protected).';
+    }
+    header('Location: /admin/users.php');
+    exit;
 }
 
 $users = $userModel->getAll();
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
+<?php if ($flash !== ''): ?>
+    <script>document.addEventListener('DOMContentLoaded',function(){window.higoffeToast(<?= json_encode($flash, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) ?>,'success');});</script>
+<?php endif; ?>
 <h1 class="text-xl font-black text-stone-900">Users</h1>
 <p class="mt-0.5 text-sm text-stone-500"><?= count($users) ?> registered accounts.</p>
 
@@ -51,13 +68,28 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php endif; ?>
                     </td>
                     <td class="px-4 py-3 text-right">
-                        <form method="post" class="inline" data-confirm="<?= $u['is_suspended'] ? 'Unsuspend' : 'Suspend' ?> this account?">
-                            <input type="hidden" name="user_id" value="<?= (int) $u['user_id'] ?>">
-                            <input type="hidden" name="action" value="<?= $u['is_suspended'] ? 'unsuspend' : 'suspend' ?>">
-                            <button type="submit" class="rounded-full border px-3 py-1 text-[11px] font-bold <?= $u['is_suspended'] ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-red-300 text-red-600 hover:bg-red-50' ?>">
-                                <?= $u['is_suspended'] ? 'Unsuspend' : 'Suspend' ?>
-                            </button>
-                        </form>
+                        <div class="flex items-center justify-end gap-2">
+                            <!-- Suspend / Unsuspend -->
+                            <?php if ($u['role'] !== 'admin'): ?>
+                                <form method="post" class="inline" data-confirm="<?= $u['is_suspended'] ? 'Unsuspend' : 'Suspend' ?> this account?">
+                                    <input type="hidden" name="user_id" value="<?= (int) $u['user_id'] ?>">
+                                    <input type="hidden" name="action" value="<?= $u['is_suspended'] ? 'unsuspend' : 'suspend' ?>">
+                                    <button type="submit" class="rounded-full border px-3 py-1 text-[11px] font-bold <?= $u['is_suspended'] ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-amber-300 text-amber-700 hover:bg-amber-50' ?>">
+                                        <?= $u['is_suspended'] ? 'Unsuspend' : 'Suspend' ?>
+                                    </button>
+                                </form>
+                                <!-- Delete (permanent) -->
+                                <form method="post" class="inline" data-confirm="Permanently DELETE <?= htmlspecialchars($u['full_name'], ENT_QUOTES, 'UTF-8') ?>? This cannot be undone.">
+                                    <input type="hidden" name="user_id" value="<?= (int) $u['user_id'] ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <button type="submit" class="rounded-full border border-red-300 px-3 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">
+                                        Delete
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <span class="text-[11px] text-stone-400">Admin — protected</span>
+                            <?php endif; ?>
+                        </div>
                     </td>
                 </tr>
             <?php endforeach; ?>
