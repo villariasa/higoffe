@@ -20,20 +20,22 @@ class Mailer {
     private string $from_email;
     private string $from_name;
     private string $encryption; // 'tls' or 'ssl'
+    private string $resend_api_key;
 
     public function __construct(?PDO $pdo = null) {
-        $host = $port = $username = $password = $from_email = $from_name = $encryption = null;
+        $host = $port = $username = $password = $from_email = $from_name = $encryption = $resend_api_key = null;
 
         if ($pdo) {
             require_once __DIR__ . '/../models/Settings.php';
             $settings = new Settings($pdo);
-            $host       = $settings->get('smtp_host');
-            $port       = $settings->get('smtp_port');
-            $username   = $settings->get('smtp_username');
-            $password   = $settings->get('smtp_password');
-            $from_email = $settings->get('smtp_from_email');
-            $from_name  = $settings->get('smtp_from_name');
-            $encryption = $settings->get('smtp_encryption');
+            $host           = $settings->get('smtp_host');
+            $port           = $settings->get('smtp_port');
+            $username       = $settings->get('smtp_username');
+            $password       = $settings->get('smtp_password');
+            $from_email     = $settings->get('smtp_from_email');
+            $from_name      = $settings->get('smtp_from_name');
+            $encryption     = $settings->get('smtp_encryption');
+            $resend_api_key = $settings->get('resend_api_key');
         }
 
         if (!$host || !$port || !$username || !$password || !$from_email) {
@@ -45,31 +47,42 @@ class Mailer {
             $from_name  = $from_name ?: getenv('SMTP_FROM_NAME');
             $encryption = $encryption ?: getenv('SMTP_ENCRYPTION');
         }
+        if (!$resend_api_key) {
+            $resend_api_key = getenv('RESEND_API_KEY') ?: null;
+        }
 
-        if (!$host || !$port || !$username || !$password || !$from_email) {
+        if (!$host || !$port || !$username || !$password || !$from_email || !$resend_api_key) {
             $credentials_file = __DIR__ . '/smtp_credentials.php';
             if (file_exists($credentials_file)) {
                 require_once $credentials_file;
-                $host       = $host ?: (defined('SMTP_HOST') ? SMTP_HOST : null);
-                $port       = $port ?: (defined('SMTP_PORT') ? SMTP_PORT : null);
-                $username   = $username ?: (defined('SMTP_USERNAME') ? SMTP_USERNAME : null);
-                $password   = $password ?: (defined('SMTP_PASSWORD') ? SMTP_PASSWORD : null);
-                $from_email = $from_email ?: (defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : null);
-                $from_name  = $from_name ?: (defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : null);
-                $encryption = $encryption ?: (defined('SMTP_ENCRYPTION') ? SMTP_ENCRYPTION : null);
+                $host           = $host ?: (defined('SMTP_HOST') ? SMTP_HOST : null);
+                $port           = $port ?: (defined('SMTP_PORT') ? SMTP_PORT : null);
+                $username       = $username ?: (defined('SMTP_USERNAME') ? SMTP_USERNAME : null);
+                $password       = $password ?: (defined('SMTP_PASSWORD') ? SMTP_PASSWORD : null);
+                $from_email     = $from_email ?: (defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : null);
+                $from_name      = $from_name ?: (defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : null);
+                $encryption     = $encryption ?: (defined('SMTP_ENCRYPTION') ? SMTP_ENCRYPTION : null);
+                $resend_api_key = $resend_api_key ?: (defined('RESEND_API_KEY') ? RESEND_API_KEY : null);
             }
         }
 
-        $this->host       = (string) $host;
-        $this->port       = (int) $port;
-        $this->username   = (string) $username;
-        $this->password   = (string) $password;
-        $this->from_email = (string) $from_email;
-        $this->from_name  = (string) ($from_name ?: 'Higoffe');
-        $this->encryption = (string) ($encryption ?: 'tls');
+        $this->host           = (string) $host;
+        $this->port           = (int) $port;
+        $this->username       = (string) $username;
+        $this->password       = (string) $password;
+        $this->from_email     = (string) $from_email;
+        $this->from_name      = (string) ($from_name ?: 'Higoffe');
+        $this->encryption     = (string) ($encryption ?: 'tls');
+        $this->resend_api_key = (string) $resend_api_key;
     }
 
     public function send(string $to_email, string $subject, string $html_body): bool {
+        // Prefer Resend HTTPS API when configured — Render free tier blocks
+        // outbound SMTP ports (25/465/587), whereas HTTPS (443) always works.
+        if ($this->resend_api_key !== '') {
+            return $this->sendViaResend($to_email, $subject, $html_body);
+        }
+
         if (!$this->host || !$this->port || !$this->username || !$this->password || !$this->from_email) {
             error_log('Mailer: SMTP not configured, skipping send to ' . $to_email);
             return false;
@@ -121,6 +134,57 @@ class Mailer {
         } finally {
             fclose($socket);
         }
+    }
+
+    private function sendViaResend(string $to_email, string $subject, string $html_body): bool {
+        $from_email = $this->from_email ?: 'onboarding@resend.dev';
+        $payload = json_encode([
+            'from'    => "{$this->from_name} <{$from_email}>",
+            'to'      => [$to_email],
+            'subject' => $subject,
+            'html'    => $html_body,
+        ]);
+
+        if (function_exists('curl_init')) {
+            $ch = curl_init('https://api.resend.com/emails');
+            curl_setopt_array($ch, [
+                CURLOPT_POST           => true,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 15,
+                CURLOPT_HTTPHEADER     => [
+                    'Authorization: Bearer ' . $this->resend_api_key,
+                    'Content-Type: application/json',
+                ],
+                CURLOPT_POSTFIELDS     => $payload,
+            ]);
+            $resp = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err  = curl_error($ch);
+            curl_close($ch);
+
+            if ($resp === false || $code < 200 || $code >= 300) {
+                error_log("Mailer (Resend): HTTP {$code} — " . ($err ?: $resp));
+                return false;
+            }
+            return true;
+        }
+
+        $ctx = stream_context_create([
+            'http' => [
+                'method'        => 'POST',
+                'header'        => "Authorization: Bearer {$this->resend_api_key}\r\nContent-Type: application/json\r\n",
+                'content'       => $payload,
+                'timeout'       => 15,
+                'ignore_errors' => true,
+            ],
+        ]);
+        $resp = @file_get_contents('https://api.resend.com/emails', false, $ctx);
+        $status_line = $http_response_header[0] ?? '';
+        if ($resp === false || !preg_match('/\s2\d\d\s/', $status_line)) {
+            error_log("Mailer (Resend): {$status_line} — {$resp}");
+            return false;
+        }
+        return true;
     }
 
     private function openSocket() {

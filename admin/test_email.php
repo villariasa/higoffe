@@ -45,6 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 require_once __DIR__ . '/../models/Settings.php';
 $settings = new Settings($pdo);
 $config = [
+    'transport'       => ($settings->get('resend_api_key') ?: getenv('RESEND_API_KEY')) ? 'Resend HTTPS API ✅' : 'SMTP (ports 587/465 blocked on Render free tier)',
+    'resend_api_key'  => $settings->get('resend_api_key') ? '•••••••• (DB)' : (getenv('RESEND_API_KEY') ? '•••••••• (env)' : '(not set)'),
     'smtp_host'       => $settings->get('smtp_host') ?: getenv('SMTP_HOST') ?: '(not set)',
     'smtp_port'       => $settings->get('smtp_port') ?: getenv('SMTP_PORT') ?: '(not set)',
     'smtp_encryption' => $settings->get('smtp_encryption') ?: getenv('SMTP_ENCRYPTION') ?: '(not set)',
