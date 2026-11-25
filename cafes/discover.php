@@ -43,9 +43,9 @@ require_once __DIR__ . '/../includes/header.php';
         Nearby
     </a>
     <?php foreach ($chips as $chip): ?>
-        <?php $active = strcasecmp($chip, $keyword) === 0; ?>
+        <?php $is_chip_active = strcasecmp($chip, $keyword) === 0; ?>
         <a href="/cafes/discover.php?q=<?= urlencode($chip) ?><?= $coords_query ?>"
-           class="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold <?= $active ? 'bg-coffee text-white' : 'bg-white text-stone-600 border border-stone-200' ?>">
+           class="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold <?= $is_chip_active ? 'bg-coffee text-white' : 'bg-white text-stone-600 border border-stone-200' ?>">
             <?= htmlspecialchars($chip, ENT_QUOTES, 'UTF-8') ?>
         </a>
     <?php endforeach; ?>

@@ -31,18 +31,18 @@ if ($nav_role === 'customer') {
 <nav class="fixed bottom-0 inset-x-0 z-50 mx-auto w-full max-w-md border-t border-stone-200 bg-white lg:hidden">
     <div class="grid grid-cols-5">
         <?php foreach ($tabs as $tab): ?>
-            <?php $active = strpos($path, $tab['match']) === 0; ?>
+            <?php $is_tab_active = strpos($path, $tab['match']) === 0; ?>
             <?php if ($tab['icon'] === 'plus'): ?>
                 <a href="<?= $tab['href'] ?>" class="flex flex-col items-center justify-center py-1.5" aria-label="Create post">
                     <span class="-mt-4 flex h-11 w-11 items-center justify-center rounded-full bg-accent text-white shadow-md">
                         <?php icon('plus', 'w-6 h-6'); ?>
                     </span>
-                    <span class="mt-0.5 text-[10px] font-semibold <?= $active ? 'text-accent' : 'text-stone-500' ?>"><?= $tab['label'] ?></span>
+                    <span class="mt-0.5 text-[10px] font-semibold <?= $is_tab_active ? 'text-accent' : 'text-stone-500' ?>"><?= $tab['label'] ?></span>
                 </a>
             <?php else: ?>
                 <a href="<?= $tab['href'] ?>" class="flex flex-col items-center justify-center gap-0.5 py-2">
-                    <?php icon($tab['icon'], 'w-5 h-5 ' . ($active ? 'text-accent' : 'text-stone-400')); ?>
-                    <span class="text-[10px] font-semibold <?= $active ? 'text-accent' : 'text-stone-500' ?>"><?= $tab['label'] ?></span>
+                    <?php icon($tab['icon'], 'w-5 h-5 ' . ($is_tab_active ? 'text-accent' : 'text-stone-400')); ?>
+                    <span class="text-[10px] font-semibold <?= $is_tab_active ? 'text-accent' : 'text-stone-500' ?>"><?= $tab['label'] ?></span>
                 </a>
             <?php endif; ?>
         <?php endforeach; ?>

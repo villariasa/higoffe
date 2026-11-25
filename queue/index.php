@@ -16,20 +16,21 @@ if (!$cafe) {
     exit;
 }
 
-// is_array(...) ?: [] guards, not (array) casts — (array) false would
-// wrap it into a 1-element [false] array instead of an empty list.
+// Use distinct variable names ($waiting_chats, $active_chats, $resolved_chats)
+// so included partials (e.g. header.php navigation) never clobber them.
 $conversationModel = new Conversation($pdo);
 $waiting_raw = $conversationModel->getWaitingQueue((int) $cafe['cafe_id']);
-$waiting = is_array($waiting_raw) ? $waiting_raw : [];
+$waiting_chats = is_array($waiting_raw) ? $waiting_raw : [];
 $active_raw = $conversationModel->getActiveForSeller((int) $_SESSION['user_id']);
-$active = is_array($active_raw) ? $active_raw : [];
+$active_chats = is_array($active_raw) ? $active_raw : [];
 $resolved_raw = $conversationModel->getResolvedForCafe((int) $cafe['cafe_id']);
-$resolved = is_array($resolved_raw) ? $resolved_raw : [];
+$resolved_chats = is_array($resolved_raw) ? $resolved_raw : [];
 
 $orderModel = new Order($pdo);
 $order_summary = [];
 foreach (['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup'] as $status_label) {
-    $order_summary[$status_label] = count($orderModel->getForSellerByStatus((int) $cafe['cafe_id'], $status_label));
+    $status_orders = $orderModel->getForSellerByStatus((int) $cafe['cafe_id'], $status_label);
+    $order_summary[$status_label] = is_array($status_orders) ? count($status_orders) : 0;
 }
 $week_sales = $orderModel->getCafeSalesSummary((int) $cafe['cafe_id'], 7);
 
@@ -71,12 +72,12 @@ require_once __DIR__ . '/../includes/header.php';
 
 <!-- Waiting queue -->
 <section class="mt-5">
-    <?php render_section_header('New inquiries (' . count($waiting) . ')'); ?>
-    <?php if (empty($waiting)): ?>
+    <?php render_section_header('New inquiries (' . count($waiting_chats) . ')'); ?>
+    <?php if (empty($waiting_chats)): ?>
         <?php render_empty_state('check-circle', 'Queue is clear', 'New customer inquiries will appear here, oldest first.'); ?>
     <?php else: ?>
         <div id="waiting-list" class="space-y-2 px-4 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 lg:px-6">
-            <?php foreach ($waiting as $conv): ?>
+            <?php foreach ($waiting_chats as $conv): ?>
                 <div class="flex items-center gap-3 rounded-2xl bg-white p-3">
                     <?php render_avatar(null, $conv['customer_name'], 'w-10 h-10'); ?>
                     <div class="min-w-0 flex-1">
@@ -92,12 +93,12 @@ require_once __DIR__ . '/../includes/header.php';
 
 <!-- Active conversations -->
 <section class="mt-5">
-    <?php render_section_header('Active chats (' . count($active) . ')'); ?>
-    <?php if (empty($active)): ?>
+    <?php render_section_header('Active chats (' . count($active_chats) . ')'); ?>
+    <?php if (empty($active_chats)): ?>
         <?php render_empty_state('chat-bubble', 'No active conversations'); ?>
     <?php else: ?>
         <div class="divide-y divide-stone-100 lg:grid lg:grid-cols-2 lg:gap-3 lg:divide-y-0 lg:px-6">
-            <?php foreach ($active as $conv): ?>
+            <?php foreach ($active_chats as $conv): ?>
                 <a href="/chat/conversation.php?id=<?= (int) $conv['conversation_id'] ?>" class="flex items-center gap-3 bg-white px-4 py-3 active:bg-stone-50 lg:rounded-2xl lg:border lg:border-stone-100 lg:hover:shadow-md lg:transition-shadow">
                     <?php render_avatar(null, $conv['customer_name'], 'w-10 h-10'); ?>
                     <div class="min-w-0 flex-1">
@@ -112,11 +113,11 @@ require_once __DIR__ . '/../includes/header.php';
 </section>
 
 <!-- Resolved -->
-<?php if (!empty($resolved)): ?>
+<?php if (!empty($resolved_chats)): ?>
     <section class="mt-5">
-        <?php render_section_header('Resolved (' . count($resolved) . ')'); ?>
+        <?php render_section_header('Resolved (' . count($resolved_chats) . ')'); ?>
         <div class="divide-y divide-stone-100 opacity-70">
-            <?php foreach (array_slice($resolved, 0, 5) as $conv): ?>
+            <?php foreach (array_slice($resolved_chats, 0, 5) as $conv): ?>
                 <div class="flex items-center gap-3 bg-white px-4 py-2.5">
                     <?php render_avatar(null, $conv['customer_name'], 'w-8 h-8'); ?>
                     <p class="truncate text-[13px] font-semibold text-stone-600"><?= htmlspecialchars($conv['customer_name'], ENT_QUOTES, 'UTF-8') ?></p>

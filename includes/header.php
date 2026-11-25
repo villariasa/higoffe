@@ -130,9 +130,9 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
         <a href="/admin/index.php" class="px-3 text-xl font-black tracking-tight text-white">Higoffe<span class="text-accent">.</span> <span class="text-[10px] font-bold uppercase tracking-widest text-white/50">Admin</span></a>
         <nav class="mt-6 flex flex-1 flex-col gap-1">
             <?php foreach ($admin_nav as $item): ?>
-                <?php $active = strpos($current_path, $item['match']) === 0; ?>
+                <?php $is_nav_active = strpos($current_path, $item['match']) === 0; ?>
                 <a href="<?= $item['href'] ?>"
-                   class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-colors <?= $active ? 'bg-accent text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' ?>">
+                   class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-colors <?= $is_nav_active ? 'bg-accent text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' ?>">
                     <?php icon($item['icon'], 'w-5 h-5'); ?>
                     <?= $item['label'] ?>
                 </a>
@@ -152,8 +152,8 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
             </div>
             <nav class="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-2">
                 <?php foreach ($admin_nav as $item): ?>
-                    <?php $active = strpos($current_path, $item['match']) === 0; ?>
-                    <a href="<?= $item['href'] ?>" class="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold <?= $active ? 'bg-accent text-white' : 'text-white/70' ?>"><?= $item['label'] ?></a>
+                    <?php $is_nav_active = strpos($current_path, $item['match']) === 0; ?>
+                    <a href="<?= $item['href'] ?>" class="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold <?= $is_nav_active ? 'bg-accent text-white' : 'text-white/70' ?>"><?= $item['label'] ?></a>
                 <?php endforeach; ?>
             </nav>
         </header>
@@ -176,9 +176,9 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
 
             <nav class="flex flex-1 items-center gap-1">
                 <?php foreach ($desktop_nav as $item): ?>
-                    <?php $active = strpos($current_path, $item['match']) === 0; ?>
+                    <?php $is_nav_active = strpos($current_path, $item['match']) === 0; ?>
                     <a href="<?= $item['href'] ?>"
-                       class="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors <?= $active ? 'bg-coffee text-white' : 'text-stone-600 hover:bg-cream' ?>">
+                       class="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors <?= $is_nav_active ? 'bg-coffee text-white' : 'text-stone-600 hover:bg-cream' ?>">
                         <?php icon($item['icon'], 'w-4.5 h-4.5'); ?>
                         <?= $item['label'] ?>
                     </a>

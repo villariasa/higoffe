@@ -28,9 +28,9 @@ require_once __DIR__ . '/../includes/header.php';
 <!-- Status tabs -->
 <div class="no-scrollbar flex gap-2 overflow-x-auto px-4 pt-3 lg:px-6">
     <?php foreach ($statuses as $status): ?>
-        <?php $active = $status === $active_status; ?>
+        <?php $is_status_active = $status === $active_status; ?>
         <a href="/orders/seller_dashboard.php?status=<?= urlencode($status) ?>"
-           class="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold <?= $active ? 'bg-coffee text-white' : 'bg-white text-stone-600 border border-stone-200' ?>">
+           class="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold <?= $is_status_active ? 'bg-coffee text-white' : 'bg-white text-stone-600 border border-stone-200' ?>">
             <?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?>
         </a>
     <?php endforeach; ?>
