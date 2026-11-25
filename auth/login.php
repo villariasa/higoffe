@@ -16,6 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submitted_email = $email;
 
     $pdo = (new Database())->connect();
+
+    // Rate limit: 10 login attempts per IP per 60 seconds.
+    require_once __DIR__ . '/../includes/rate_limit.php';
+    rate_limit_check('login', $_SERVER['REMOTE_ADDR'] ?? '', 10, 60);
+
     $userModel = new User($pdo);
     $user = $userModel->getByEmail($email);
 

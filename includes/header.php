@@ -2,8 +2,25 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
 require_once __DIR__ . '/icons.php';
 require_once __DIR__ . '/../config/Uploads.php';
+
+// ── Security headers (applied on every page load) ──────────────────────────
+if (!headers_sent()) {
+    header("X-Frame-Options: SAMEORIGIN");
+    header("X-Content-Type-Options: nosniff");
+    header("Referrer-Policy: strict-origin-when-cross-origin");
+    header("Permissions-Policy: geolocation=(), camera=(), microphone=()");
+    $csp_host = '';
+    $csp_worker = Uploads::workerUrl();
+    if ($csp_worker) {
+        $csp_host = (string)(parse_url($csp_worker, PHP_URL_HOST) ?? '');
+    }
+    $img_src   = "img-src 'self' data:" . ($csp_host ? " https://{$csp_host}" : '');
+    $conn_src  = "connect-src 'self'" . ($csp_host ? " https://{$csp_host}" : '');
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; {$img_src}; {$conn_src}; frame-ancestors 'none';");
+}
 
 $media_host = Uploads::publicHost();
 

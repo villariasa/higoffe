@@ -12,6 +12,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($email !== '') {
         $pdo = (new Database())->connect();
+
+        // Rate limit: 5 resend attempts per IP per 300 seconds (5 min).
+        require_once __DIR__ . '/../includes/rate_limit.php';
+        rate_limit_check('resend', $_SERVER['REMOTE_ADDR'] ?? '', 5, 300);
+
         $userModel = new User($pdo);
         $user = $userModel->getByEmail($email);
 
