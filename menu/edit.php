@@ -1,10 +1,12 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../config/Uploads.php';
 require_once __DIR__ . '/../models/Cafe.php';
 require_once __DIR__ . '/../models/Product.php';
 require_once __DIR__ . '/../models/ProductSize.php';
 require_once __DIR__ . '/../models/ProductAddon.php';
 require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../includes/image_upload_field.php';
 require_role('seller');
 
 $product_id = (int) ($_GET['id'] ?? 0);
@@ -39,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($product_name === '' || $base_price <= 0) {
             $error = 'Product name and a price greater than 0 are required.';
+        } elseif (!Uploads::isAllowedMediaUrl($image_url)) {
+            $error = 'Invalid image URL.';
         } else {
             $productModel->update($product_id, $product_name, $description, $base_price, $image_url, $is_available);
             $saved = true;
@@ -66,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $sizes = $sizeModel->getByProduct($product_id);
 $addons = $addonModel->getByProduct($product_id);
+$upload_auth = Uploads::issueToken((int) $_SESSION['user_id'], 'product');
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -94,10 +99,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <label class="block text-sm text-stone-600 mb-1">Base price (&#8369;)</label>
                 <input type="number" step="0.01" min="0" name="base_price" required value="<?= htmlspecialchars((string) $product['base_price'], ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
             </div>
-            <div>
-                <label class="block text-sm text-stone-600 mb-1">Image URL</label>
-                <input type="text" name="image_url" value="<?= htmlspecialchars($product['image_url'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
-            </div>
+            <?php render_image_upload_field($upload_auth, 'image_url', 'Product photo', $product['image_url'] ?? ''); ?>
             <label class="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="is_available" <?= $product['is_available'] ? 'checked' : '' ?>>
                 Available on menu
@@ -152,4 +154,5 @@ require_once __DIR__ . '/../includes/header.php';
 
     <a href="/menu/index.php" class="text-amber-700 underline text-sm">&larr; Back to menu</a>
 </div>
+<script src="/includes/image_upload.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

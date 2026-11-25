@@ -61,6 +61,33 @@ require_once __DIR__ . '/../includes/header.php';
 
     <p class="font-semibold mb-4">Total: &#8369;<?= number_format((float) $order['total_amount'], 2) ?></p>
 
+    <div class="border-t border-stone-200 pt-4 mb-4">
+        <p class="text-sm font-semibold mb-2">Payment</p>
+        <?php if ($order['payment_status'] === 'unpaid'): ?>
+            <?php if ($role === 'customer'): ?>
+                <a href="/orders/submit_payment.php?id=<?= (int) $order_id ?>" class="inline-block bg-stone-800 text-white rounded px-4 py-2 text-sm font-semibold">Submit payment proof</a>
+            <?php else: ?>
+                <p class="text-sm text-stone-500">Waiting for the customer to submit payment proof.</p>
+            <?php endif; ?>
+        <?php elseif ($order['payment_status'] === 'proof_submitted'): ?>
+            <?php if (!empty($order['payment_proof_url'])): ?>
+                <a href="<?= htmlspecialchars($order['payment_proof_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">
+                    <img src="<?= htmlspecialchars($order['payment_proof_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Payment proof" class="w-32 h-32 object-cover rounded-lg border border-stone-200 mb-2">
+                </a>
+            <?php endif; ?>
+            <?php if ($is_owner_seller): ?>
+                <form method="post" action="/orders/confirm_payment.php">
+                    <input type="hidden" name="order_id" value="<?= (int) $order_id ?>">
+                    <button type="submit" class="bg-amber-700 text-white rounded px-4 py-2 text-sm font-semibold">Confirm payment</button>
+                </form>
+            <?php else: ?>
+                <p class="text-sm text-stone-500">Proof submitted — waiting for the café to confirm.</p>
+            <?php endif; ?>
+        <?php else: ?>
+            <p class="text-sm text-green-700 font-semibold">&check; Payment confirmed</p>
+        <?php endif; ?>
+    </div>
+
     <?php if ($is_owner_seller && !empty($next_statuses)): ?>
         <div class="flex gap-2 flex-wrap">
             <?php foreach ($next_statuses as $status): ?>

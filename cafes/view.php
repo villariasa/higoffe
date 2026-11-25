@@ -70,6 +70,13 @@ require_once __DIR__ . '/../includes/header.php';
                     </form>
                 </div>
             <?php endif; ?>
+            <form method="post" action="/reports/submit.php" class="report-form">
+                <input type="hidden" name="target_type" value="cafe">
+                <input type="hidden" name="target_id" value="<?= $cafe_id ?>">
+                <input type="hidden" name="return_to" value="/cafes/view.php?id=<?= $cafe_id ?>">
+                <input type="hidden" name="reason" class="reason-input">
+                <button type="submit" class="text-xs text-stone-400 hover:text-red-600">Report this café</button>
+            </form>
         </div>
     </div>
 </div>
@@ -106,4 +113,13 @@ require_once __DIR__ . '/../includes/header.php';
         <p class="text-stone-500 text-sm">No posts yet.</p>
     <?php endif; ?>
 </div>
+<script>
+document.querySelectorAll('.report-form').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+        const reason = window.prompt('Why are you reporting this café?');
+        if (reason === null) { e.preventDefault(); return; }
+        form.querySelector('.reason-input').value = reason;
+    });
+});
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

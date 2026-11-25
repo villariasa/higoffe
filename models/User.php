@@ -36,6 +36,34 @@ class User {
         return $stmt->fetchColumn();
     }
 
+    public function updateProfile(int $user_id, string $bio, string $avatar_url): void {
+        $sql = "UPDATE users SET bio = :bio, avatar_url = :avatar_url WHERE user_id = :user_id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["bio" => $bio, "avatar_url" => $avatar_url, "user_id" => $user_id]);
+    }
+
+    public function setVerificationToken(int $user_id, string $token, string $expires_at): void {
+        $sql = "UPDATE users SET verification_token = :token, verification_token_expires_at = :expires_at
+                WHERE user_id = :user_id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["token" => $token, "expires_at" => $expires_at, "user_id" => $user_id]);
+    }
+
+    public function getByVerificationToken(string $token) {
+        $sql = "SELECT * FROM users WHERE verification_token = :token";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["token" => $token]);
+        return $stmt->fetch();
+    }
+
+    public function markVerified(int $user_id): void {
+        $sql = "UPDATE users
+                SET email_verified = TRUE, verification_token = NULL, verification_token_expires_at = NULL
+                WHERE user_id = :user_id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["user_id" => $user_id]);
+    }
+
     public function setSuspended(int $user_id, bool $is_suspended) {
         $sql = "UPDATE users SET is_suspended = :is_suspended WHERE user_id = :user_id";
         $stmt = $this->pdo->prepare($sql);

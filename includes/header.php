@@ -17,14 +17,17 @@ $current_role = $_SESSION['role'] ?? null;
     <a href="/index.php" class="font-bold text-lg text-amber-800">Higoffe</a>
     <div class="flex items-center gap-4 text-sm">
         <?php if ($current_role === 'customer'): ?>
+            <a href="/feed/index.php" class="hover:text-amber-700">Feed</a>
+            <a href="/profile/view.php" class="hover:text-amber-700">Profile</a>
             <a href="/cafes/discover.php" class="hover:text-amber-700">Discover</a>
             <a href="/chat/inbox.php" class="hover:text-amber-700">Messages</a>
-            <a href="/orders/customer_history.php" class="hover:text-amber-700">My Orders</a>
+            <a href="/orders/customer_history.php" class="hover:text-amber-700">Orders</a>
         <?php elseif ($current_role === 'seller'): ?>
+            <a href="/feed/index.php" class="hover:text-amber-700">Feed</a>
+            <a href="/profile/view.php" class="hover:text-amber-700">Profile</a>
             <a href="/queue/index.php" class="hover:text-amber-700">Inquiries</a>
             <a href="/menu/index.php" class="hover:text-amber-700">Menu</a>
             <a href="/orders/seller_dashboard.php" class="hover:text-amber-700">Orders</a>
-            <a href="/feed/create_post.php" class="hover:text-amber-700">New Post</a>
         <?php elseif ($current_role === 'admin'): ?>
             <a href="/admin/index.php" class="hover:text-amber-700">Admin</a>
         <?php endif; ?>

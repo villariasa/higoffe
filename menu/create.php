@@ -1,8 +1,10 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../config/Uploads.php';
 require_once __DIR__ . '/../models/Cafe.php';
 require_once __DIR__ . '/../models/Product.php';
 require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../includes/image_upload_field.php';
 require_role('seller');
 
 $pdo = (new Database())->connect();
@@ -24,6 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($product_name === '' || $base_price <= 0) {
         $error = 'Product name and a price greater than 0 are required.';
+    } elseif (!Uploads::isAllowedMediaUrl($image_url)) {
+        $error = 'Invalid image URL.';
     } else {
         $productModel = new Product($pdo);
         $product_id = $productModel->create((int) $cafe['cafe_id'], $product_name, $description, $base_price, $image_url);
@@ -31,6 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 }
+
+$upload_auth = Uploads::issueToken((int) $_SESSION['user_id'], 'product');
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -54,11 +60,9 @@ require_once __DIR__ . '/../includes/header.php';
             <label class="block text-sm text-stone-600 mb-1">Base price (&#8369;)</label>
             <input type="number" step="0.01" min="0" name="base_price" required class="w-full border border-stone-300 rounded p-2">
         </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Image URL</label>
-            <input type="text" name="image_url" class="w-full border border-stone-300 rounded p-2">
-        </div>
+        <?php render_image_upload_field($upload_auth, 'image_url', 'Product photo', ''); ?>
         <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Save and continue</button>
     </form>
 </div>
+<script src="/includes/image_upload.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

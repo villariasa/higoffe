@@ -3,6 +3,16 @@
 Living status doc. Update this as the team works — it's the source of truth
 for "what's actually done" vs. the plan at `/home/litecloud/.claude/plans/rosy-strolling-bengio.md`.
 
+## Direction pivot (read this first)
+
+Higoffe is now **social-first**: the feed/profiles/follows/comments are the
+primary surface and the app's landing page; chat-to-order is a supporting
+feature reachable from a café profile or a post, not the front door. See the
+replan discussion in conversation for the full rationale and the USP:
+*"the only app where discovering a drink socially and getting it made are
+the same tap."* `index.php` now routes both roles to `/feed/index.php`
+first.
+
 ## Status: scaffold complete, needs real Supabase + manual testing
 
 Every file in the plan's directory structure (§3) has been written — models,
@@ -28,26 +38,45 @@ first-run as a real QA pass, not a formality.
 | Chat-to-order | `orders/create_order_card.php` | Written — session-cart-based item builder, posts an `order_card` message type |
 | Order management | `models/Order.php`, `OrderItem.php`, `orders/*.php` | Written — guarded `transition()` state machine (plan §5), customer confirm/cancel, seller status buttons, dashboards |
 | Admin | `admin/*.php` | Written — counts dashboard, suspend users, verify cafés, delete posts |
+| Email verification | `config/Mailer.php`, `includes/mail_helpers.php`, `auth/verify.php`, `resend_verification.php` | Written — hand-rolled SMTP client (no Composer), register no longer auto-logs-in, login blocks unverified accounts. **Needs real SMTP credentials to actually test** — see below |
+| Admin-editable SMTP | `models/Settings.php`, `admin/settings.php` | Written — SMTP host/port/username/password/from/encryption are editable from `/admin/settings.php`, stored in the new `settings` table, and take priority over env vars / `config/smtp_credentials.php` once saved |
+| Real image uploads | `higoffe-upload-worker/` (new Cloudflare Worker + R2 bucket), `config/Uploads.php`, `includes/image_upload_field.php`/`image_upload.js` | Written — browser uploads straight to R2 via a signed, HMAC-token, 5-min-expiry, no AWS SDK/signing in PHP. Wired into menu photos, café logo/cover, post photos, profile avatars, chat photos, payment-proof screenshots. **Worker is not deployed yet** — see next actions |
+| Social pivot: posts by anyone | `models/Post.php` (rewritten), `feed/create_post.php` | Written — `posts.author_user_id` + nullable `cafe_id`; customers post personal experiences, sellers optionally post as their café |
+| Comments | `models/PostComment.php`, `feed/comment.php`, `feed/index.php` | Written — now core (was stretch), AJAX add, flat (no nesting) |
+| User profiles + user-to-user follows | `models/UserFollow.php`, `profile/view.php`, `profile/edit.php`, `users.bio`/`avatar_url` | Written — bio/avatar, follower/following counts, follow/unfollow |
+| Messenger-style chat upgrade | `chat/_message_bubble.php`, `chat/conversation.php`, `chat/send_message.php` | Written — avatar circles, rounded "tail" bubbles, real image messages (camera button, not just order cards), centered muted `system` message type |
+| Scripted auto-replies | `chat/start.php`, `queue/claim.php`, `models/Message::createSystem()` | Written — "a barista will be with you shortly" on inquiry start, "you're now chatting with X" on claim |
+| Payment-proof flow | `orders.payment_status`/`payment_proof_url`, `orders/submit_payment.php`, `orders/confirm_payment.php`, `orders/view.php` | Written — customer uploads a GCash/bank screenshot, seller confirms; deliberate manual stand-in since real online payment was out of scope |
+| Content-moderation reports | `models/Report.php`, `reports/submit.php`, `admin/reports.php` | Written — report a post or café, admin resolves |
+| Sales report | `admin/sales_report.php`, `Order::getSalesSummary/getOrderCountsByStatus/getTopProducts` | Written — date-range revenue/orders/top-products, plain SQL aggregates |
 
-## Known simplifications (intentional, not bugs — see plan §1)
+## Known simplifications (intentional, not bugs)
 
-- **No dedicated notifications table.** Chat/queue "new activity" signals piggyback on the existing poll endpoints. Closing a tab loses that signal.
-- **Order-card rendering in the live poll path is simplified.** A freshly-arrived `order_card` message shows a bare "view/respond" link via JS; the richer inline summary only renders on full page load (via `chat/_message_bubble.php`). Acceptable MVP trade-off, not worth JS-side templating effort.
-- **Post comments and reviews**: tables exist in `schema.sql`, no UI built. Stretch-only per plan §1 — build only if Week 3 has slack.
-- **One café per seller account** (`cafes.owner_user_id` is effectively 1:1 in how the UI uses it) — fine for MVP scope, no multi-branch support (matches plan's explicit cuts).
+- **No dedicated notifications table.** Chat/queue/social "new activity" signals piggyback on existing poll endpoints or on-page counts. Closing a tab loses that signal.
+- **Order-card rendering in the live poll path is simplified** for text/order_card parity with the new image-message path — both now render inline without a page reload.
+- **Reviews are not a separate feature** — a post about a café *is* the review, by design (social-first pivot).
+- **One café per seller account** — fine for MVP scope, no multi-branch support.
+- **Comments are flat, not threaded.** Reports target `post`/`cafe` only (not generic `user` reports, though the column allows it).
+- **Reacts/share**: discussed, not yet built — see the separate reactions/share proposal delivered alongside this update.
 
 ## Not yet done (next actions for the team)
 
-1. **Run `schema.sql`** in the Supabase SQL editor for the project. Confirm no errors, confirm `order_statuses` seeded with all 7 labels.
+1. **Run `schema.sql`** in the Supabase SQL editor for the project. Confirm no errors, confirm `order_statuses` seeded with all 7 labels. If your Supabase project already has data (schema ran before email verification existed), run `migrations/001_add_email_verification.sql` instead of re-running all of `schema.sql`.
 2. **Create `config/db_credentials.php`** from the example file, using the **Transaction Pooler** connection string (port 6543), not the direct 5432 connection — see the comment in `db_credentials.example.php` for why.
-3. **Install PHP locally** (this build environment had none — `php -l` was never run on any of these files). Lint every file before first deploy:
+3. **Create `config/smtp_credentials.php`** from `config/smtp_credentials.example.php`. Gmail SMTP needs an **App Password** (requires 2FA enabled on the Google account) — a normal password will be rejected. For development without spamming real inboxes, use Mailtrap.io's sandbox SMTP instead.
+4. **Install PHP locally** (this build environment had none — `php -l` was never run on any of these files). Lint every file before first deploy:
    ```
    find . -name "*.php" -exec php -l {} \;
    ```
-4. **Click through the full core loop manually** — see `TASKS_CHECKLIST.md` §3 for the exact steps. This has never been executed, only reviewed by eye.
-5. **Run the concurrency race tests** (plan §8) — these are the single highest-risk area since they were never actually exercised against a live DB.
-6. **Run the XSS checklist** (plan §11) against every free-text field listed there.
-7. Decide hosting (Railway/Render — verify `pdo_pgsql` is enabled) and deploy.
+5. **Click through the full core loop manually** — see `TASKS_CHECKLIST.md` §3 for the exact steps. This has never been executed, only reviewed by eye.
+6. **Test the email verification flow specifically** — register, confirm the email actually arrives, click the link, confirm login is blocked before verifying and works after. This is brand new code with zero live testing (no SMTP server reachable from this build environment).
+7. **Run the concurrency race tests** (plan §8) — these are the single highest-risk area since they were never actually exercised against a live DB.
+8. **Run the XSS checklist** (plan §11) against every free-text field listed there.
+9. Decide hosting (Railway/Render — verify `pdo_pgsql` is enabled, and confirm outbound SMTP ports 587/465 aren't blocked) and deploy.
+10. **Run `migrations/004_social_first_pivot.sql`** (or full `schema.sql` on a fresh DB) before touching the feed — posts now require `author_user_id`.
+11. **Deploy `higoffe-upload-worker`**: create the R2 bucket `higoffe-images` in the Cloudflare dashboard, enable its public r2.dev URL (or a custom domain), `wrangler secret put UPLOAD_SIGNING_SECRET` (matching `config/upload_credentials.php`'s value exactly) and `ALLOWED_ORIGINS`, then `npm run deploy` inside `higoffe-upload-worker/`. Nothing with a photo upload button will work until this is live.
+12. **Test the whole new social loop**: customer posts a personal photo, a seller posts as their café, both show correctly in the feed, comments and likes work, follow a user and confirm their posts affect nothing they shouldn't (privacy wasn't a requirement here — all posts are public).
+13. **Test payment proof end-to-end**: confirm an order, submit a screenshot, confirm as seller, check the chat log shows both the image and the two system messages.
 
 ## Security review notes from the build itself
 

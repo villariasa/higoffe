@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../config/Uploads.php';
 require_once __DIR__ . '/../models/Conversation.php';
 require_once __DIR__ . '/../models/Message.php';
 require_once __DIR__ . '/../models/Order.php';
@@ -49,10 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $messageModel = new Message($pdo);
 $messages = $messageModel->getAllForConversation($conversation_id);
 $orderModel = new Order($pdo);
+$upload_auth = Uploads::issueToken($user_id, 'chat');
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-xl mx-auto bg-white border border-stone-200 rounded-lg flex flex-col" style="height: 70vh;">
+<div class="max-w-xl mx-auto bg-white border border-stone-200 rounded-2xl shadow-sm flex flex-col" style="height: 70vh;">
     <div class="p-4 border-b border-stone-200 flex items-center justify-between">
         <h1 class="font-bold">Conversation #<?= (int) $conversation_id ?></h1>
         <?php if ($role === 'seller' && $conversation['status'] === 'active'): ?>
@@ -74,11 +76,15 @@ require_once __DIR__ . '/../includes/header.php';
         <?php endforeach; ?>
     </div>
 
-    <form id="send-form" method="post" class="p-3 border-t border-stone-200 flex gap-2">
-        <input type="hidden" name="action" value="send_message">
-        <input type="text" id="body-input" name="body" placeholder="Type a message..." required class="flex-1 border border-stone-300 rounded p-2 text-sm">
-        <button type="submit" class="bg-amber-700 text-white rounded px-4 text-sm font-semibold">Send</button>
+    <form id="send-form" class="p-3 border-t border-stone-200 flex items-center gap-2">
+        <label class="shrink-0 cursor-pointer text-stone-500 hover:text-amber-700" title="Send a photo">
+            &#128247;
+            <input type="file" id="chat-image-input" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
+        </label>
+        <input type="text" id="body-input" placeholder="Type a message..." class="flex-1 border border-stone-300 rounded-full px-3 py-2 text-sm">
+        <button type="submit" class="bg-amber-700 text-white rounded-full px-4 py-2 text-sm font-semibold">Send</button>
     </form>
+    <p id="chat-status" class="px-3 pb-2 text-xs text-stone-400"></p>
 </div>
 
 <script>
@@ -87,11 +93,50 @@ require_once __DIR__ . '/../includes/header.php';
     const conversationId = list.dataset.conversationId;
     let afterId = parseInt(list.dataset.afterId, 10) || 0;
     const myUserId = <?= (int) $user_id ?>;
+    const status = document.getElementById('chat-status');
 
-    function escapeHtml(s) {
-        return s.replace(/[&<>"']/g, function (c) {
-            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-        });
+    const uploadAuth = {
+        workerUrl: <?= json_encode($upload_auth['worker_url']) ?>,
+        token: <?= json_encode($upload_auth['token']) ?>,
+        expiry: <?= (int) $upload_auth['expiry'] ?>,
+        userId: <?= (int) $upload_auth['user_id'] ?>,
+        scope: <?= json_encode($upload_auth['scope']) ?>,
+    };
+
+    function renderBubble(m) {
+        if (m.message_type === 'system') {
+            const p = document.createElement('p');
+            p.className = 'text-center text-xs text-stone-400 italic py-1';
+            p.textContent = m.body || '';
+            return p;
+        }
+        const isMine = m.sender_user_id == myUserId;
+        const wrap = document.createElement('div');
+        wrap.className = 'flex items-end gap-2 ' + (isMine ? 'justify-end' : 'justify-start');
+        if (!isMine) {
+            const avatar = document.createElement('div');
+            avatar.className = 'w-6 h-6 rounded-full bg-stone-200 shrink-0';
+            wrap.appendChild(avatar);
+        }
+        const bubble = document.createElement('div');
+        bubble.className = 'max-w-[75%] rounded-2xl px-3 py-2 text-sm ' +
+            (isMine ? 'bg-amber-700 text-white rounded-br-sm' : 'bg-stone-100 text-stone-800 rounded-bl-sm');
+        if (m.message_type === 'order_card') {
+            const a = document.createElement('a');
+            a.className = 'underline text-xs';
+            a.href = '/orders/view.php?id=' + m.order_id;
+            a.textContent = 'New order card — view / respond';
+            bubble.appendChild(a);
+        } else if (m.message_type === 'image' && m.image_url) {
+            const img = document.createElement('img');
+            img.src = m.image_url;
+            img.className = 'rounded-lg max-w-full max-h-64 object-cover';
+            bubble.appendChild(img);
+        } else {
+            bubble.textContent = m.body || '';
+        }
+        wrap.appendChild(bubble);
+        return wrap;
     }
 
     async function poll() {
@@ -99,17 +144,7 @@ require_once __DIR__ . '/../includes/header.php';
         const res = await fetch('/chat/poll_messages.php?conversation_id=' + conversationId + '&after_id=' + afterId);
         const rows = await res.json();
         rows.forEach(function (m) {
-            const wrap = document.createElement('div');
-            wrap.className = 'flex ' + (m.sender_user_id == myUserId ? 'justify-end' : 'justify-start');
-            const bubble = document.createElement('div');
-            bubble.className = 'max-w-[80%] rounded-lg px-3 py-2 text-sm ' + (m.sender_user_id == myUserId ? 'bg-amber-700 text-white' : 'bg-stone-100 text-stone-800');
-            if (m.message_type === 'order_card') {
-                bubble.innerHTML = 'New order card — <a class="underline" href="/orders/view.php?id=' + m.order_id + '">view / respond</a>';
-            } else {
-                bubble.textContent = m.body || '';
-            }
-            wrap.appendChild(bubble);
-            list.appendChild(wrap);
+            list.appendChild(renderBubble(m));
             afterId = Math.max(afterId, m.message_id);
         });
         if (rows.length) list.scrollTop = list.scrollHeight;
@@ -127,6 +162,38 @@ require_once __DIR__ . '/../includes/header.php';
             body: 'conversation_id=' + conversationId + '&body=' + encodeURIComponent(body)
         });
         poll();
+    });
+
+    document.getElementById('chat-image-input').addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        status.textContent = 'Uploading photo...';
+
+        const form = new FormData();
+        form.append('file', file);
+        form.append('token', uploadAuth.token);
+        form.append('expiry', uploadAuth.expiry);
+        form.append('user_id', uploadAuth.userId);
+        form.append('scope', uploadAuth.scope);
+
+        try {
+            const res = await fetch(uploadAuth.workerUrl + '/upload', { method: 'POST', body: form });
+            const data = await res.json();
+            if (!data.ok) {
+                status.textContent = data.error || 'Upload failed.';
+                return;
+            }
+            await fetch('/chat/send_message.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'conversation_id=' + conversationId + '&type=image&image_url=' + encodeURIComponent(data.url)
+            });
+            status.textContent = '';
+            poll();
+        } catch (err) {
+            status.textContent = 'Upload failed — check your connection.';
+        }
+        e.target.value = '';
     });
 
     setInterval(poll, 3000);

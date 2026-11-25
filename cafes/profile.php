@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../config/Uploads.php';
 require_once __DIR__ . '/../models/Cafe.php';
 require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../includes/image_upload_field.php';
 require_role('seller');
 
 $pdo = (new Database())->connect();
@@ -20,6 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($cafe_name === '') {
         $error = 'Café name is required.';
+    } elseif (!Uploads::isAllowedMediaUrl($logo_url) || !Uploads::isAllowedMediaUrl($cover_url)) {
+        $error = 'Invalid image URL.';
     } elseif ($cafe) {
         $cafeModel->update((int) $cafe['cafe_id'], $cafe_name, $description, $address, $logo_url, $cover_url);
         $cafe = $cafeModel->getByOwner((int) $_SESSION['user_id']);
@@ -30,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $saved = true;
     }
 }
+
+$upload_auth = Uploads::issueToken((int) $_SESSION['user_id'], 'cafe');
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -56,14 +62,8 @@ require_once __DIR__ . '/../includes/header.php';
             <label class="block text-sm text-stone-600 mb-1">Address</label>
             <input type="text" name="address" value="<?= htmlspecialchars($cafe['address'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
         </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Logo image URL</label>
-            <input type="text" name="logo_url" value="<?= htmlspecialchars($cafe['logo_url'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
-        </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Cover image URL</label>
-            <input type="text" name="cover_url" value="<?= htmlspecialchars($cafe['cover_url'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
-        </div>
+        <?php render_image_upload_field($upload_auth, 'logo_url', 'Logo', $cafe['logo_url'] ?? ''); ?>
+        <?php render_image_upload_field($upload_auth, 'cover_url', 'Cover photo', $cafe['cover_url'] ?? ''); ?>
         <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Save</button>
     </form>
 
@@ -73,4 +73,5 @@ require_once __DIR__ . '/../includes/header.php';
         </p>
     <?php endif; ?>
 </div>
+<script src="/includes/image_upload.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

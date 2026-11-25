@@ -10,8 +10,27 @@ for the current high-level build status.
 - [ ] Confirm `order_statuses` has all 7 rows (Pending, Confirmed, Preparing, Ready for Pickup, Out for Delivery, Completed, Cancelled)
 - [ ] Each teammate copies `config/db_credentials.example.php` → `config/db_credentials.php` and fills in the **Transaction Pooler** connection string (port 6543) — not the direct 5432 connection
 - [ ] Confirm `config/db_credentials.php` is actually gitignored before anyone commits (`git status` should not show it)
+- [ ] If your Supabase project already had `users` before email verification was added, run `migrations/001_add_email_verification.sql`
+- [ ] Copy `config/smtp_credentials.example.php` → `config/smtp_credentials.php`, fill in real SMTP details (Gmail requires an **App Password**, not your normal password — needs 2FA enabled first)
+- [ ] Confirm `config/smtp_credentials.php` is gitignored too
+- [ ] Set the `APP_URL` environment variable (e.g. `https://higoffe.onrender.com`, or `http://localhost:8000` locally) — verification emails use this, never the request's Host header (that header can be forged)
 - [ ] Install PHP locally if you don't have it; run `php -l` on every file once before first use
-- [ ] Agree on hosting (Railway or Render — confirm `pdo_pgsql` extension is enabled before committing to a host)
+- [ ] Agree on hosting (Railway or Render — confirm `pdo_pgsql` extension is enabled, and that outbound SMTP ports 587/465 aren't blocked, before committing to a host)
+- [ ] Run `migrations/004_social_first_pivot.sql` (adds `posts.author_user_id`, makes `posts.cafe_id` nullable, adds `user_follows`) — required before using the feed at all
+- [ ] Create the R2 bucket `higoffe-images` in the Cloudflare dashboard, enable public access (r2.dev URL is fastest to start), note the public URL
+- [ ] In `higoffe-upload-worker/`: `npm install`, set `PUBLIC_BASE_URL` in `wrangler.toml` to that public URL, `wrangler secret put UPLOAD_SIGNING_SECRET` (generate with `php -r "echo bin2hex(random_bytes(32));"`), `wrangler secret put ALLOWED_ORIGINS` (your deployed app's origin), then `npm run deploy`
+- [ ] Copy `config/upload_credentials.example.php` → `config/upload_credentials.php`, set `UPLOAD_WORKER_URL` to the deployed Worker's URL and `UPLOAD_SIGNING_SECRET` to the **exact same value** you just set on the Worker
+- [ ] Confirm `config/upload_credentials.php` is gitignored too
+
+## 0b. Email verification (new — test before relying on it)
+
+- [ ] Register a new customer account with a real email you control — confirm the verification email actually arrives (check spam folder too)
+- [ ] Click the link — confirm it logs you in and `users.email_verified` becomes `TRUE` in the DB
+- [ ] Try logging in with an unverified account (register, don't click the link) — confirm login is blocked with a "please verify" message and a working resend link
+- [ ] Use the resend link/form — confirm a second email arrives with a new token
+- [ ] Log in as admin, go to `/admin/settings.php`, confirm SMTP settings saved there actually get used (temporarily set a wrong password via the UI, confirm sending fails; fix it, confirm it works again) — this proves the DB settings path is really taking priority over the file/env fallback
+- [ ] Manually expire a token in the DB (`UPDATE users SET verification_token_expires_at = NOW() - INTERVAL '1 day' WHERE user_id = ...`) and click the old link — confirm it shows "link expired", not a crash
+- [ ] Submit an email that was never registered to `resend_verification.php` — confirm it shows the same generic "if registered..." message (doesn't reveal whether the email exists)
 
 ## 1. Auth module (own: whoever picks this up)
 
@@ -23,6 +42,24 @@ for the current high-level build status.
 - [ ] Logout clears the session (protected page redirects to login afterward)
 - [ ] Direct URL to a protected page while logged out redirects to `/auth/login.php`
 - [ ] A suspended user cannot log in (test via `admin/users.php` after admin exists)
+
+## 1b. Image uploads (new — test before relying on it anywhere)
+
+- [ ] On `menu/create.php`, pick a photo, confirm it uploads and previews, confirm it saved on `menu/index.php`
+- [ ] Try uploading a non-image file renamed to `.jpg` — confirm the Worker rejects it (magic-byte sniffing)
+- [ ] Try uploading a >5MB file — confirm it's rejected with a clear message
+- [ ] Wait 6+ minutes after loading a form, then try uploading — confirm it fails with "link expired" (proves the 5-min token actually expires) and that reloading the page fixes it
+
+## 1c. Social feed, profiles, comments, follows (new — primary surface now)
+
+- [ ] Customer creates a personal post (no "post as café" checkbox shown) — appears in feed attributed to their name/avatar, links to their profile
+- [ ] Seller creates a post with "post as café" checked — appears attributed to the café, links to the café page
+- [ ] Seller creates a post with "post as café" unchecked — appears as a personal post from that seller (not the café)
+- [ ] Like/unlike toggles and count updates without a page reload
+- [ ] Add a comment — appears immediately without reload, and persists on refresh
+- [ ] Visit another user's `/profile/view.php?id=`, follow them, confirm follower/following counts update on both profiles
+- [ ] Report a post and a café — confirm both show up in `/admin/reports.php`, "Mark resolved" removes them from the pending list
+- [ ] `/admin/sales_report.php` — change the date range, confirm revenue/order-count/top-products actually change
 
 ## 2. Café + Menu modules
 
@@ -44,6 +81,11 @@ for the current high-level build status.
 - [ ] Customer clicks Confirm → order status becomes Confirmed, seller dashboard (`orders/seller_dashboard.php`) shows it under Confirmed
 - [ ] Seller walks the order through every status button on `orders/view.php` in order: Preparing → Ready for Pickup (or Out for Delivery) → Completed
 - [ ] Completed order shows correctly in `orders/customer_history.php`
+- [ ] At the very start, confirm the auto-reply system message ("A barista will be with you shortly") appears centered/muted, not as a chat bubble from anyone
+- [ ] When a seller claims, confirm the "You're now chatting with X" system message appears for both parties
+- [ ] Send a photo in chat (camera icon) — confirm it appears as an image bubble for both parties within one poll cycle
+- [ ] After the customer confirms the order, go to `orders/submit_payment.php`, upload a screenshot — confirm the order's payment section shows "waiting for confirmation" and the image appears in the chat as both an image message and a system note
+- [ ] As the seller, click "Confirm payment" — confirm the order shows "✓ Payment confirmed" and a system message appears in chat
 
 ## 4. Concurrency tests (do these deliberately — highest grading/demo risk)
 
@@ -66,7 +108,10 @@ call for that field and fix it before merging.
 - [ ] Size label, add-on label (`menu/edit.php` → `orders/create_order_card.php`)
 - [ ] Delivery address (`orders/create_order_card.php` → `orders/view.php`, `orders/confirm.php`)
 - [ ] Full name (register forms → anywhere it's echoed: chat, queue, admin user list, order customer name)
-- [ ] Admin views specifically (`admin/users.php`, `admin/cafes.php`, `admin/posts.php`) — don't skip admin, it's not exempt
+- [ ] Profile bio (`profile/edit.php` → `profile/view.php`)
+- [ ] Post comment text (`feed/index.php` comment box)
+- [ ] Report reason (`feed/index.php`/`cafes/view.php` report prompt → `admin/reports.php`)
+- [ ] Admin views specifically (`admin/users.php`, `admin/cafes.php`, `admin/posts.php`, `admin/reports.php`) — don't skip admin, it's not exempt
 
 ## 6. Admin module
 

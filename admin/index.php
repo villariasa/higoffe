@@ -40,5 +40,8 @@ require_once __DIR__ . '/../includes/header.php';
     <a href="/admin/users.php" class="text-amber-700 underline">Manage users</a>
     <a href="/admin/cafes.php" class="text-amber-700 underline">Verify cafés</a>
     <a href="/admin/posts.php" class="text-amber-700 underline">Moderate posts</a>
+    <a href="/admin/reports.php" class="text-amber-700 underline">Reports</a>
+    <a href="/admin/sales_report.php" class="text-amber-700 underline">Sales report</a>
+    <a href="/admin/settings.php" class="text-amber-700 underline">SMTP settings</a>
 </div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

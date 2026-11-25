@@ -10,6 +10,11 @@ CREATE TABLE users (
     password_hash  VARCHAR(255) NOT NULL,
     phone          VARCHAR(30),
     is_suspended   BOOLEAN NOT NULL DEFAULT FALSE,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    verification_token             VARCHAR(64),
+    verification_token_expires_at  TIMESTAMPTZ,
+    bio            VARCHAR(280),
+    avatar_url     VARCHAR(255),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -50,9 +55,13 @@ CREATE TABLE product_addons (
     addon_price    NUMERIC(10,2) NOT NULL DEFAULT 0
 );
 
+-- Posts are the primary social surface: EITHER a seller posting as their
+-- café (cafe_id set) OR any user posting a personal café experience
+-- (cafe_id NULL). author_user_id is always the real poster, for either case.
 CREATE TABLE posts (
     post_id        SERIAL PRIMARY KEY,
-    cafe_id        INTEGER NOT NULL REFERENCES cafes(cafe_id),
+    author_user_id INTEGER NOT NULL REFERENCES users(user_id),
+    cafe_id        INTEGER NULL REFERENCES cafes(cafe_id),
     caption        TEXT,
     image_url      VARCHAR(255),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -66,7 +75,7 @@ CREATE TABLE post_likes (
     UNIQUE (post_id, user_id)
 );
 
--- stretch-only, not built in MVP unless Week 3 has slack
+-- Core social feature (was stretch-only under the old ordering-first scope).
 CREATE TABLE post_comments (
     comment_id     SERIAL PRIMARY KEY,
     post_id        INTEGER NOT NULL REFERENCES posts(post_id),
@@ -75,12 +84,24 @@ CREATE TABLE post_comments (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Customer follows a café (unchanged from the original plan).
 CREATE TABLE follows (
     follow_id        SERIAL PRIMARY KEY,
     customer_user_id INTEGER NOT NULL REFERENCES users(user_id),
     cafe_id          INTEGER NOT NULL REFERENCES cafes(cafe_id),
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (customer_user_id, cafe_id)
+);
+
+-- User follows user — separate table from `follows` on purpose: two plain
+-- tables are simpler and clearer than one polymorphic nullable-pair table.
+CREATE TABLE user_follows (
+    user_follow_id    SERIAL PRIMARY KEY,
+    follower_user_id  INTEGER NOT NULL REFERENCES users(user_id),
+    followed_user_id  INTEGER NOT NULL REFERENCES users(user_id),
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (follower_user_id, followed_user_id),
+    CHECK (follower_user_id != followed_user_id)
 );
 
 CREATE TABLE conversations (
@@ -98,7 +119,7 @@ CREATE TABLE messages (
     message_id      SERIAL PRIMARY KEY,
     conversation_id INTEGER NOT NULL REFERENCES conversations(conversation_id),
     sender_user_id  INTEGER NOT NULL REFERENCES users(user_id),
-    message_type    VARCHAR(20) NOT NULL DEFAULT 'text' CHECK (message_type IN ('text','order_card')),
+    message_type    VARCHAR(20) NOT NULL DEFAULT 'text' CHECK (message_type IN ('text','order_card','image','system')),
     body            TEXT,
     order_id        INTEGER NULL,
     image_url       VARCHAR(255),
@@ -121,6 +142,9 @@ CREATE TABLE orders (
     subtotal           NUMERIC(10,2) NOT NULL DEFAULT 0,
     additional_charges NUMERIC(10,2) NOT NULL DEFAULT 0,
     total_amount       NUMERIC(10,2) NOT NULL DEFAULT 0,
+    payment_status     VARCHAR(20) NOT NULL DEFAULT 'unpaid'
+                        CHECK (payment_status IN ('unpaid','proof_submitted','confirmed')),
+    payment_proof_url  VARCHAR(255),
     created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -142,13 +166,23 @@ CREATE TABLE order_item_addons (
     addon_price          NUMERIC(10,2) NOT NULL
 );
 
--- optional / stretch
+-- Admin-editable key/value config (SMTP settings live here — see
+-- admin/settings.php — so they can be changed from the UI without a
+-- redeploy, instead of being locked to env vars / a config file).
+CREATE TABLE settings (
+    setting_key   VARCHAR(100) PRIMARY KEY,
+    setting_value TEXT,
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Content-moderation reports (customers flag a post/café; admin reviews).
 CREATE TABLE reports (
     report_id        SERIAL PRIMARY KEY,
     reporter_user_id INTEGER NOT NULL REFERENCES users(user_id),
     target_type      VARCHAR(20) NOT NULL CHECK (target_type IN ('post','user','cafe')),
     target_id        INTEGER NOT NULL,
     reason           TEXT,
+    status           VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','resolved')),
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

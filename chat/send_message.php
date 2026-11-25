@@ -1,11 +1,14 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../config/Uploads.php';
 require_once __DIR__ . '/../models/Conversation.php';
 require_once __DIR__ . '/../models/Message.php';
 require_once __DIR__ . '/../includes/auth_check.php';
 
 $conversation_id = (int) ($_POST['conversation_id'] ?? 0);
 $body = (string) trim($_POST['body'] ?? '');
+$message_type = ($_POST['type'] ?? 'text') === 'image' ? 'image' : 'text';
+$image_url = (string) trim($_POST['image_url'] ?? '');
 
 $pdo = (new Database())->connect();
 $conversationModel = new Conversation($pdo);
@@ -20,13 +23,16 @@ $is_participant = $conversation && (
 
 header("Content-Type: application/json");
 
-if (!$is_participant || $body === '') {
+$has_content = $message_type === 'image' ? $image_url !== '' : $body !== '';
+// Blocks a crafted request (not from our own upload JS) from storing a
+// javascript: URL that would execute when rendered inside an <a href>.
+if (!$is_participant || !$has_content || !Uploads::isAllowedMediaUrl($image_url)) {
     echo json_encode(["success" => false]);
     exit;
 }
 
 $messageModel = new Message($pdo);
-$message_id = $messageModel->create($conversation_id, $user_id, 'text', $body);
+$message_id = $messageModel->create($conversation_id, $user_id, $message_type, $body, null, $image_url);
 $conversationModel->touchLastMessageAt($conversation_id);
 
 echo json_encode(["success" => true, "message_id" => $message_id]);

@@ -93,6 +93,71 @@ class Order {
         return $this->allowedTransitions[$from_label] ?? [];
     }
 
+    // Manual payment-proof flow (stand-in for real online payment, which
+    // was explicitly out of scope). Both steps are guarded atomic updates,
+    // same pattern as transition() — a stale double-submit can't double-apply.
+    public function submitPaymentProof(int $order_id, string $proof_url): bool {
+        $sql = "UPDATE orders
+                SET payment_status = 'proof_submitted', payment_proof_url = :proof_url, updated_at = NOW()
+                WHERE order_id = :order_id AND payment_status = 'unpaid'";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["proof_url" => $proof_url, "order_id" => $order_id]);
+        return $stmt->rowCount() === 1;
+    }
+
+    public function confirmPayment(int $order_id): bool {
+        $sql = "UPDATE orders
+                SET payment_status = 'confirmed', updated_at = NOW()
+                WHERE order_id = :order_id AND payment_status = 'proof_submitted'";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["order_id" => $order_id]);
+        return $stmt->rowCount() === 1;
+    }
+
+    // --- Admin sales report (plain SQL aggregates, no new tables) ---
+
+    public function getSalesSummary(string $start_date, string $end_date): array {
+        $sql = "SELECT
+                    COUNT(*) AS order_count,
+                    COALESCE(SUM(total_amount), 0) AS total_revenue
+                FROM orders
+                WHERE created_at >= :start_date AND created_at < :end_date
+                  AND status_id = (SELECT status_id FROM order_statuses WHERE status_label = 'Completed')";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["start_date" => $start_date, "end_date" => $end_date]);
+        return $stmt->fetch() ?: ["order_count" => 0, "total_revenue" => 0];
+    }
+
+    public function getOrderCountsByStatus(string $start_date, string $end_date): array {
+        $sql = "SELECT os.status_label, COUNT(o.order_id) AS order_count
+                FROM order_statuses os
+                LEFT JOIN orders o ON o.status_id = os.status_id
+                    AND o.created_at >= :start_date AND o.created_at < :end_date
+                GROUP BY os.status_label
+                ORDER BY os.status_id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["start_date" => $start_date, "end_date" => $end_date]);
+        return $stmt->fetchAll();
+    }
+
+    public function getTopProducts(string $start_date, string $end_date, int $limit = 5): array {
+        $sql = "SELECT p.product_name, SUM(oi.quantity) AS total_quantity, SUM(oi.line_total) AS total_revenue
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                JOIN products p ON oi.product_id = p.product_id
+                WHERE o.created_at >= :start_date AND o.created_at < :end_date
+                  AND o.status_id = (SELECT status_id FROM order_statuses WHERE status_label = 'Completed')
+                GROUP BY p.product_name
+                ORDER BY total_quantity DESC
+                LIMIT :limit";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(":start_date", $start_date);
+        $stmt->bindValue(":end_date", $end_date);
+        $stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
     // Admin counts dashboard
     public function countAll(): int {
         return (int) $this->pdo->query("SELECT COUNT(*) FROM orders")->fetchColumn();

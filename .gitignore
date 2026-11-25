@@ -1,1 +1,3 @@
 config/db_credentials.php
+config/smtp_credentials.php
+config/upload_credentials.php
