@@ -9,6 +9,8 @@ require_once __DIR__ . '/../includes/components.php';
 
 $pdo = (new Database())->connect();
 
+$cafeModel = new Cafe($pdo);
+
 $lat = isset($_GET['lat']) && is_numeric($_GET['lat']) ? (float) $_GET['lat'] : null;
 $lng = isset($_GET['lng']) && is_numeric($_GET['lng']) ? (float) $_GET['lng'] : null;
 
