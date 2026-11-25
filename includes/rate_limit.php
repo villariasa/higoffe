@@ -33,34 +33,35 @@ function rate_limit_check(
 
     $window_start = date('Y-m-d H:i:s', intdiv(time(), $window_secs) * $window_secs);
 
-    // Upsert the counter for the current window.
-    $pdo->prepare(
-        "INSERT INTO rate_limit_buckets (bucket_key, window_start, hit_count)
-         VALUES (:k, :ws, 1)
-         ON CONFLICT (bucket_key, window_start)
-         DO UPDATE SET hit_count = rate_limit_buckets.hit_count + 1"
-    )->execute([':k' => $key, ':ws' => $window_start]);
+    // Wrap everything in a try/catch — if the migration hasn't been run yet
+    // the table won't exist and we must NOT crash the page; fail open instead.
+    try {
+        // Upsert the counter for the current window.
+        $pdo->prepare(
+            "INSERT INTO rate_limit_buckets (bucket_key, window_start, hit_count)
+             VALUES (:k, :ws, 1)
+             ON CONFLICT (bucket_key, window_start)
+             DO UPDATE SET hit_count = rate_limit_buckets.hit_count + 1"
+        )->execute([':k' => $key, ':ws' => $window_start]);
 
-    // Read back the current count.
-    $st = $pdo->prepare(
-        "SELECT hit_count FROM rate_limit_buckets
-         WHERE bucket_key = :k AND window_start = :ws"
-    );
-    $st->execute([':k' => $key, ':ws' => $window_start]);
-    $count = (int) $st->fetchColumn();
+        // Read back the current count.
+        $st = $pdo->prepare(
+            "SELECT hit_count FROM rate_limit_buckets
+             WHERE bucket_key = :k AND window_start = :ws"
+        );
+        $st->execute([':k' => $key, ':ws' => $window_start]);
+        $count = (int) $st->fetchColumn();
 
-    // Prune stale windows (older than 2× the window) — cheap, O(few rows).
-    $pdo->prepare(
-        "DELETE FROM rate_limit_buckets
-         WHERE window_start < NOW() - INTERVAL ':secs seconds'"
-    );
-    // Use a direct query with the value interpolated because PDO won't bind
-    // into an INTERVAL literal — the value is derived from our own constant,
-    // never from user input, so this is safe.
-    $pdo->exec(
-        "DELETE FROM rate_limit_buckets
-         WHERE window_start < NOW() - INTERVAL '" . ($window_secs * 2) . " seconds'"
-    );
+        // Prune stale windows — safe interpolation (integer from our own const).
+        $pdo->exec(
+            "DELETE FROM rate_limit_buckets
+             WHERE window_start < NOW() - INTERVAL '" . ($window_secs * 2) . " seconds'"
+        );
+    } catch (PDOException $e) {
+        // Table missing or DB error — log it but let the request through.
+        error_log('rate_limit_check: ' . $e->getMessage());
+        return;
+    }
 
     if ($count > $max_hits) {
         http_response_code(429);
