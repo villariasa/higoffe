@@ -6,7 +6,27 @@
 (function () {
     const KEY_LAT = 'higoffe_lat';
     const KEY_LNG = 'higoffe_lng';
+    const KEY_CITY = 'higoffe_city';
     const KEY_DISMISSED = 'higoffe_loc_dismissed';
+
+    // Reverse-geocodes once via OpenStreetMap's free Nominatim so the
+    // location chip can show a real city name instead of a vague "Near
+    // you" label — no API key, fits the no-paid-service coding standards.
+    function resolveCityLabel(lat, lng) {
+        fetch('https://nominatim.openstreetmap.org/reverse?format=json&zoom=10&lat=' + lat + '&lon=' + lng)
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                const addr = data && data.address ? data.address : {};
+                const city = addr.city || addr.town || addr.municipality || addr.county || null;
+                if (!city) return;
+                sessionStorage.setItem(KEY_CITY, city);
+                localStorage.setItem(KEY_CITY, city);
+                document.querySelectorAll('.location-chip-label').forEach(function (el) {
+                    el.textContent = city;
+                });
+            })
+            .catch(function () { /* chip keeps its current label */ });
+    }
 
     function stored() {
         const lat = sessionStorage.getItem(KEY_LAT) || localStorage.getItem(KEY_LAT);
@@ -78,6 +98,7 @@
             document.querySelectorAll('.location-chip-label').forEach(function (el) {
                 el.textContent = 'Near you';
             });
+            resolveCityLabel(coords.lat, coords.lng);
 
             document.getElementById('location-ask-banner')?.remove();
             document.getElementById('location-chip-tooltip')?.remove();
@@ -180,9 +201,11 @@
             localStorage.setItem(KEY_LNG, fromUrl.lng);
         }
 
+        const cachedCity = sessionStorage.getItem(KEY_CITY) || localStorage.getItem(KEY_CITY);
         document.querySelectorAll('.location-chip-label').forEach(function (el) {
-            if (stored()) el.textContent = 'Near you';
+            if (stored()) el.textContent = cachedCity || 'Near you';
         });
+        if (coords && !cachedCity) resolveCityLabel(coords.lat, coords.lng);
 
         document.querySelectorAll('.location-chip').forEach(function (btn) {
             if (btn.dataset.locBound) return;

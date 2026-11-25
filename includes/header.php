@@ -122,7 +122,7 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
 </head>
 <body class="bg-stone-200 text-stone-800"<?= !empty($wants_location) ? ' data-wants-location="1"' : '' ?>>
 
-<div class="relative mx-auto min-h-screen w-full bg-cream <?= $is_admin ? 'max-w-none lg:grid lg:grid-cols-[240px_minmax(0,1fr)]' : ($is_app_user ? 'max-w-md shadow-xl lg:max-w-none lg:shadow-none lg:grid lg:grid-cols-[260px_minmax(0,1fr)]' : 'max-w-md shadow-xl') ?> <?= $is_app_user ? 'pb-20 lg:pb-0' : '' ?>">
+<div class="relative mx-auto min-h-screen w-full bg-cream <?= $is_admin ? 'max-w-none lg:grid lg:grid-cols-[240px_minmax(0,1fr)]' : ($is_app_user ? 'max-w-md shadow-xl lg:max-w-none lg:shadow-none' : 'max-w-md shadow-xl') ?> <?= $is_app_user ? 'pb-20 lg:pb-0' : '' ?>">
 
 <?php if ($is_admin): ?>
     <!-- Admin sidebar (desktop) -->
@@ -161,53 +161,56 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
 <?php else: ?>
 
 <?php if ($is_app_user): ?>
-    <!-- Desktop left sidebar (hidden on mobile) -->
-    <aside class="sticky top-0 hidden h-screen flex-col border-r border-stone-200 bg-white px-4 py-5 lg:flex">
-        <a href="/index.php" class="px-3 text-2xl font-black tracking-tight text-coffee">Higoffe<span class="text-accent">.</span></a>
+    <!-- Desktop top navbar (Grab/Foodpanda pattern) — hidden on mobile, where
+         the bottom tab bar + top bar (below) already cover navigation. The
+         sidebar pattern is admin-only; customer/seller desktop gets its own
+         full-width top nav instead. -->
+    <header class="sticky top-0 z-40 hidden border-b border-stone-200 bg-white lg:block">
+        <div class="mx-auto flex max-w-[1400px] items-center gap-5 px-6 py-3">
+            <a href="/index.php" class="shrink-0 text-2xl font-black tracking-tight text-coffee">Higoffe<span class="text-accent">.</span></a>
 
-        <button type="button" class="location-chip mt-4 flex items-center gap-1.5 rounded-xl border border-stone-200 bg-cream px-3 py-2 text-xs font-semibold text-stone-600 transition-colors hover:border-coffee" title="Click to use current location">
-            <?php icon('map-pin-solid', 'w-3.5 h-3.5 text-accent'); ?>
-            <span class="location-chip-label">Set location</span>
-        </button>
+            <button type="button" class="location-chip flex shrink-0 items-center gap-1.5 rounded-xl border border-stone-200 bg-cream px-3 py-2 text-xs font-semibold text-stone-600 transition-colors hover:border-coffee" title="Click to use current location">
+                <?php icon('map-pin-solid', 'w-3.5 h-3.5 text-accent'); ?>
+                <span class="location-chip-label">Set location</span>
+            </button>
 
-        <nav class="mt-5 flex flex-1 flex-col gap-1">
-            <?php foreach ($desktop_nav as $item): ?>
-                <?php $active = strpos($current_path, $item['match']) === 0; ?>
-                <a href="<?= $item['href'] ?>"
-                   class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-semibold transition-colors <?= $active ? 'bg-coffee text-white' : 'text-stone-600 hover:bg-cream' ?>">
-                    <?php icon($item['icon'], 'w-5 h-5'); ?>
-                    <?= $item['label'] ?>
+            <nav class="flex flex-1 items-center gap-1">
+                <?php foreach ($desktop_nav as $item): ?>
+                    <?php $active = strpos($current_path, $item['match']) === 0; ?>
+                    <a href="<?= $item['href'] ?>"
+                       class="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors <?= $active ? 'bg-coffee text-white' : 'text-stone-600 hover:bg-cream' ?>">
+                        <?php icon($item['icon'], 'w-4.5 h-4.5'); ?>
+                        <?= $item['label'] ?>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+
+            <a href="/notifications.php" aria-label="Notifications"
+               class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors <?= strpos($current_path, '/notifications.php') === 0 ? 'bg-coffee text-white' : 'text-stone-500 hover:bg-cream' ?>">
+                <?php icon('bell', 'w-5 h-5'); ?>
+                <?php if ($unread_notifications > 0): ?>
+                    <span class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"><?= $unread_notifications > 9 ? '9+' : $unread_notifications ?></span>
+                <?php endif; ?>
+            </a>
+
+            <!-- User mini -->
+            <div class="flex shrink-0 items-center gap-2.5 rounded-xl border border-stone-200 bg-cream py-1.5 pl-1.5 pr-2.5">
+                <a href="/profile/view.php" class="flex h-8 w-8 items-center justify-center rounded-full bg-coffee/10 text-sm font-bold text-coffee">
+                    <?= htmlspecialchars(mb_strtoupper(mb_substr((string) ($_SESSION['full_name'] ?? '?'), 0, 1)), ENT_QUOTES, 'UTF-8') ?>
                 </a>
-            <?php endforeach; ?>
-            <a href="/notifications.php"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-semibold transition-colors <?= strpos($current_path, '/notifications.php') === 0 ? 'bg-coffee text-white' : 'text-stone-600 hover:bg-cream' ?>">
-                <span class="relative">
-                    <?php icon('bell', 'w-5 h-5'); ?>
-                    <?php if ($unread_notifications > 0): ?>
-                        <span class="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"><?= $unread_notifications > 9 ? '9+' : $unread_notifications ?></span>
-                    <?php endif; ?>
-                </span>
-                Notifications
-            </a>
-        </nav>
-
-        <!-- User mini-card -->
-        <div class="mt-4 flex items-center gap-2.5 rounded-xl border border-stone-200 bg-cream p-2.5">
-            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-coffee/10 text-sm font-bold text-coffee">
-                <?= htmlspecialchars(mb_strtoupper(mb_substr((string) ($_SESSION['full_name'] ?? '?'), 0, 1)), ENT_QUOTES, 'UTF-8') ?>
+                <div class="min-w-0 leading-tight">
+                    <p class="max-w-[9rem] truncate text-[12px] font-bold text-stone-900"><?= htmlspecialchars((string) ($_SESSION['full_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
+                    <p class="text-[10px] capitalize text-stone-400"><?= htmlspecialchars((string) $current_role, ENT_QUOTES, 'UTF-8') ?></p>
+                </div>
+                <a href="/auth/logout.php" aria-label="Log out" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-400 hover:bg-stone-200 hover:text-stone-600">
+                    <?php icon('logout', 'w-4 h-4'); ?>
+                </a>
             </div>
-            <div class="min-w-0 flex-1">
-                <p class="truncate text-[13px] font-bold text-stone-900"><?= htmlspecialchars((string) ($_SESSION['full_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
-                <p class="text-[10px] capitalize text-stone-400"><?= htmlspecialchars((string) $current_role, ENT_QUOTES, 'UTF-8') ?></p>
-            </div>
-            <a href="/auth/logout.php" aria-label="Log out" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-stone-400 hover:bg-stone-200 hover:text-stone-600">
-                <?php icon('logout', 'w-4 h-4'); ?>
-            </a>
         </div>
-    </aside>
+    </header>
 <?php endif; ?>
 
-<div class="min-w-0 <?= $is_app_user ? 'lg:pb-10' : '' ?>">
+<div class="min-w-0 <?= $is_app_user ? 'lg:mx-auto lg:max-w-[1400px] lg:pb-10' : '' ?>">
 <?php if (!$no_shell): ?>
     <?php if ($page_title !== null): ?>
         <!-- Mobile sub-page top bar: back + title -->

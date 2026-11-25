@@ -51,10 +51,10 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="mt-5 max-w-xl rounded-2xl border border-stone-200 bg-white p-5">
     <?php if ($saved): ?>
-        <p class="mb-4 flex items-center gap-2 rounded-xl bg-green-50 p-3 text-sm text-green-700"><?php icon('check-circle', 'w-4 h-4'); ?> Saved.</p>
+        <script>document.addEventListener('DOMContentLoaded', function () { window.higoffeToast('Settings saved.', 'success'); });</script>
     <?php endif; ?>
     <?php if ($error !== ''): ?>
-        <p class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+        <script>document.addEventListener('DOMContentLoaded', function () { window.higoffeToast(<?= json_encode($error, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, 'error'); });</script>
     <?php endif; ?>
 
     <form method="post" class="space-y-3.5">

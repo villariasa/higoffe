@@ -203,7 +203,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php render_section_header('Reviews'); ?>
     <div class="space-y-2.5 px-4 lg:px-6">
         <?php if ($review_error !== ''): ?>
-            <p class="rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($review_error, ENT_QUOTES, 'UTF-8') ?></p>
+            <script>document.addEventListener('DOMContentLoaded', function () { window.higoffeToast(<?= json_encode($review_error, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, 'error'); });</script>
         <?php endif; ?>
 
         <?php if ($is_customer): ?>

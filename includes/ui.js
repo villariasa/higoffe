@@ -4,6 +4,7 @@
 // swaps without re-binding.
 
 // ---- Toast (replaces alert) -------------------------------------------
+// type: 'success' | 'warning' | 'error' | 'info' (default).
 window.higoffeToast = function (message, type) {
     let wrap = document.getElementById('higoffe-toast-wrap');
     if (!wrap) {
@@ -12,10 +13,23 @@ window.higoffeToast = function (message, type) {
         wrap.className = 'fixed inset-x-0 top-3 z-[100] flex flex-col items-center gap-2 px-4 pointer-events-none';
         document.body.appendChild(wrap);
     }
+    const styles = {
+        success: 'bg-green-600 text-white',
+        warning: 'bg-amber-500 text-white',
+        error:   'bg-red-600 text-white',
+        info:    'bg-stone-900 text-white'
+    };
+    const icons = {
+        success: '<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>',
+        warning: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008ZM10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78A1.5 1.5 0 0 0 22.18 18L13.71 3.86a1.5 1.5 0 0 0-2.42 0Z"/>',
+        error:   '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 4.5c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>',
+        info:    '<path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25.75.75H12v8.25"/><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25h1.5v5.25h-1.5zM12 7.5h.007v.008H12V7.5Z"/>'
+    };
+    const key = styles[type] ? type : 'info';
     const toast = document.createElement('div');
-    toast.className = 'pointer-events-auto max-w-sm rounded-xl px-4 py-2.5 text-sm font-semibold shadow-lg ' +
-        (type === 'error' ? 'bg-red-600 text-white' : 'bg-stone-900 text-white');
-    toast.textContent = message; // textContent — messages are never parsed as HTML
+    toast.className = 'pointer-events-auto flex max-w-sm items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-lg ' + styles[key];
+    toast.innerHTML = '<svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' + icons[key] + '</svg><span></span>';
+    toast.querySelector('span').textContent = message; // textContent — messages are never parsed as HTML
     wrap.appendChild(toast);
     setTimeout(function () {
         toast.style.transition = 'opacity 300ms';
