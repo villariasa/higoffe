@@ -136,3 +136,79 @@ document.addEventListener('submit', function (e) {
     form.appendChild(row);
     row.querySelector('input').focus();
 }, true);
+
+// ---- Client-side image optimization (resize + WebP/JPEG compress) -----
+// Shrinks multi-MB phone photos before uploading to R2 so feeds and chats
+// load fast. Leaves GIFs and already-small images untouched; falls back
+// to the original file on any canvas/codec error.
+window.higoffeOptimizeImage = async function (file, maxDim, quality) {
+    maxDim = maxDim || 1280;
+    quality = quality || 0.82;
+    if (!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/gif') {
+        return file;
+    }
+
+    try {
+        let width, height, drawSource, cleanup;
+        if (typeof createImageBitmap === 'function') {
+            const bitmap = await createImageBitmap(file);
+            width = bitmap.width;
+            height = bitmap.height;
+            drawSource = bitmap;
+            cleanup = function () { bitmap.close(); };
+        } else {
+            const url = URL.createObjectURL(file);
+            const img = await new Promise(function (resolve, reject) {
+                const el = new Image();
+                el.onload = function () { resolve(el); };
+                el.onerror = reject;
+                el.src = url;
+            });
+            width = img.naturalWidth;
+            height = img.naturalHeight;
+            drawSource = img;
+            cleanup = function () { URL.revokeObjectURL(url); };
+        }
+
+        const scale = Math.min(1, maxDim / Math.max(width, height));
+        const targetW = Math.max(1, Math.round(width * scale));
+        const targetH = Math.max(1, Math.round(height * scale));
+
+        if (scale === 1 && file.size <= 150 * 1024) {
+            cleanup();
+            return file;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            cleanup();
+            return file;
+        }
+        ctx.drawImage(drawSource, 0, 0, targetW, targetH);
+        cleanup();
+
+        const toBlob = function (mime) {
+            return new Promise(function (resolve) {
+                canvas.toBlob(resolve, mime, quality);
+            });
+        };
+
+        let blob = await toBlob('image/webp');
+        let ext = '.webp';
+        if (!blob || blob.type !== 'image/webp') {
+            blob = await toBlob('image/jpeg');
+            ext = '.jpg';
+        }
+        if (!blob || blob.size >= file.size) {
+            return file;
+        }
+
+        const baseName = (file.name || 'photo').replace(/\.[^.]+$/, '');
+        return new File([blob], baseName + ext, { type: blob.type });
+    } catch (err) {
+        return file;
+    }
+};

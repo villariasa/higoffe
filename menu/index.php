@@ -34,7 +34,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="flex items-center gap-3 rounded-2xl bg-white p-3">
                     <div class="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-stone-200">
                         <?php if (!empty($product['image_url'])): ?>
-                            <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
+                            <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
                         <?php else: ?>
                             <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('beaker', 'w-6 h-6'); ?></div>
                         <?php endif; ?>

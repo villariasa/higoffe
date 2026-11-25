@@ -172,7 +172,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <p class="mt-2 whitespace-pre-wrap text-sm text-stone-800"><?= htmlspecialchars($post['caption'], ENT_QUOTES, 'UTF-8') ?></p>
                     <?php endif; ?>
                     <?php if (!empty($post['image_url'])): ?>
-                        <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="mt-2 max-h-80 w-full rounded-xl object-cover">
+                        <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="mt-2 max-h-80 w-full rounded-xl object-cover">
                     <?php endif; ?>
                     <?php render_product_chip($post); ?>
 
@@ -262,7 +262,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <a href="/cafes/view.php?id=<?= (int) $product['cafe_id'] ?>" class="flex items-center gap-2.5 rounded-xl p-1.5 transition-colors hover:bg-cream">
                         <div class="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-stone-200">
                             <?php if (!empty($product['image_url'])): ?>
-                                <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
+                                <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
                             <?php else: ?>
                                 <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('beaker', 'w-5 h-5'); ?></div>
                             <?php endif; ?>

@@ -45,7 +45,7 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
             <p class="mt-2 line-clamp-1 flex-1 whitespace-pre-wrap text-sm text-stone-700"><?= htmlspecialchars($post['caption'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
             <?php if (!empty($post['image_url'])): ?>
-                <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="mt-2 h-28 w-full rounded-xl object-cover">
+                <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="mt-2 h-28 w-full rounded-xl object-cover">
             <?php endif; ?>
             <form method="post" class="mt-3" data-confirm="Delete this post and notify the author?">
                 <input type="hidden" name="post_id" value="<?= (int) $post['post_id'] ?>">

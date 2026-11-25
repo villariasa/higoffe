@@ -85,7 +85,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <p class="whitespace-pre-wrap text-sm text-stone-800"><?= htmlspecialchars($post['caption'], ENT_QUOTES, 'UTF-8') ?></p>
                     <?php endif; ?>
                     <?php if (!empty($post['image_url'])): ?>
-                        <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="mt-2 max-h-80 w-full rounded-xl object-cover">
+                        <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="mt-2 max-h-80 w-full rounded-xl object-cover">
                     <?php endif; ?>
                     <p class="mt-2 flex items-center gap-3 text-[11px] text-stone-400">
                         <span class="flex items-center gap-1"><?php icon('heart', 'w-3.5 h-3.5'); ?><?= (int) $post['like_count'] ?></span>

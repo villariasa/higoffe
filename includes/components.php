@@ -64,7 +64,7 @@ function render_cafe_card_h(array $cafe): void {
     <a href="/cafes/view.php?id=<?= (int) $cafe['cafe_id'] ?>" class="w-36 shrink-0 lg:w-auto lg:rounded-2xl lg:bg-white lg:p-2.5 lg:transition-shadow lg:hover:shadow-md">
         <div class="h-24 w-36 overflow-hidden rounded-xl bg-stone-200 lg:h-28 lg:w-full">
             <?php if (!empty($cafe['cover_url'])): ?>
-                <img src="<?= htmlspecialchars($cafe['cover_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
+                <img src="<?= htmlspecialchars($cafe['cover_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
             <?php else: ?>
                 <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('storefront', 'w-8 h-8'); ?></div>
             <?php endif; ?>
@@ -94,9 +94,9 @@ function render_cafe_card_list(array $cafe): void {
     <a href="/cafes/view.php?id=<?= (int) $cafe['cafe_id'] ?>" class="flex gap-3 bg-white px-4 py-3 active:bg-stone-50 lg:rounded-2xl lg:border lg:border-stone-100 lg:transition-shadow lg:hover:shadow-md">
         <div class="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-stone-200">
             <?php if (!empty($cafe['logo_url'])): ?>
-                <img src="<?= htmlspecialchars($cafe['logo_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
+                <img src="<?= htmlspecialchars($cafe['logo_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
             <?php elseif (!empty($cafe['cover_url'])): ?>
-                <img src="<?= htmlspecialchars($cafe['cover_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
+                <img src="<?= htmlspecialchars($cafe['cover_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
             <?php else: ?>
                 <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('storefront', 'w-6 h-6'); ?></div>
             <?php endif; ?>
@@ -131,7 +131,7 @@ function render_drink_card(array $product): void {
     <a href="/cafes/view.php?id=<?= (int) $product['cafe_id'] ?>" class="w-32 shrink-0 lg:w-auto lg:rounded-2xl lg:bg-white lg:p-2.5 lg:transition-shadow lg:hover:shadow-md">
         <div class="h-28 w-32 overflow-hidden rounded-xl bg-stone-200 lg:h-32 lg:w-full">
             <?php if (!empty($product['image_url'])): ?>
-                <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
+                <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
             <?php else: ?>
                 <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('beaker', 'w-8 h-8'); ?></div>
             <?php endif; ?>
@@ -146,7 +146,7 @@ function render_drink_card(array $product): void {
 // Avatar circle with image-or-initial fallback.
 function render_avatar(?string $url, string $name, string $size_classes = 'w-9 h-9'): void {
     if (!empty($url)) {
-        ?><img src="<?= htmlspecialchars($url, ENT_QUOTES, 'UTF-8') ?>" alt="" class="<?= $size_classes ?> shrink-0 rounded-full object-cover"><?php
+        ?><img src="<?= htmlspecialchars($url, ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="<?= $size_classes ?> shrink-0 rounded-full object-cover"><?php
     } else {
         $initial = mb_strtoupper(mb_substr(trim($name) !== '' ? $name : '?', 0, 1));
         ?><div class="<?= $size_classes ?> shrink-0 rounded-full bg-coffee/10 flex items-center justify-center text-sm font-bold text-coffee"><?= htmlspecialchars($initial, ENT_QUOTES, 'UTF-8') ?></div><?php
@@ -163,7 +163,7 @@ function render_product_chip(array $post): void {
     <a href="/menu/view.php?id=<?= (int) $post['product_id'] ?>" class="mt-2 flex items-center gap-2.5 rounded-xl border border-stone-200 bg-cream p-2.5 transition-colors hover:border-accent">
         <div class="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-stone-200">
             <?php if (!empty($post['tagged_product_image'])): ?>
-                <img src="<?= htmlspecialchars($post['tagged_product_image'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
+                <img src="<?= htmlspecialchars($post['tagged_product_image'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
             <?php else: ?>
                 <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('beaker', 'w-5 h-5'); ?></div>
             <?php endif; ?>

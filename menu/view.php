@@ -55,7 +55,7 @@ require_once __DIR__ . '/../includes/header.php';
     <!-- Product card -->
     <div class="overflow-hidden rounded-2xl bg-white lg:border lg:border-stone-100">
         <?php if (!empty($product['image_url'])): ?>
-            <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-56 w-full object-cover lg:h-72">
+            <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" decoding="async" class="h-56 w-full object-cover lg:h-72">
         <?php endif; ?>
         <div class="p-4 lg:p-5">
             <div class="flex items-start justify-between gap-3">

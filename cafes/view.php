@@ -175,7 +175,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <a href="/menu/view.php?id=<?= (int) $product['product_id'] ?>" class="flex gap-3 rounded-2xl bg-white p-3 transition-shadow hover:shadow-md lg:border lg:border-stone-100">
                     <div class="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-stone-200">
                         <?php if (!empty($product['image_url'])): ?>
-                            <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
+                            <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">
                         <?php else: ?>
                             <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('beaker', 'w-7 h-7'); ?></div>
                         <?php endif; ?>
@@ -271,7 +271,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <p class="whitespace-pre-wrap text-sm text-stone-800"><?= htmlspecialchars($post['caption'], ENT_QUOTES, 'UTF-8') ?></p>
                     <?php endif; ?>
                     <?php if (!empty($post['image_url'])): ?>
-                        <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="mt-2 max-h-72 w-full rounded-xl object-cover">
+                        <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="mt-2 max-h-72 w-full rounded-xl object-cover">
                     <?php endif; ?>
                     <p class="mt-2 flex items-center gap-3 text-[11px] text-stone-400">
                         <span class="flex items-center gap-1"><?php icon('heart', 'w-3.5 h-3.5'); ?><?= (int) $post['like_count'] ?></span>

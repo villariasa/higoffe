@@ -5,8 +5,13 @@ document.querySelectorAll('.image-upload-field').forEach(function (field) {
     const status = field.querySelector('.status-text');
 
     fileInput.addEventListener('change', async function () {
-        const file = fileInput.files[0];
-        if (!file) return;
+        const rawFile = fileInput.files[0];
+        if (!rawFile) return;
+
+        status.textContent = 'Optimizing & uploading...';
+        const file = window.higoffeOptimizeImage
+            ? await window.higoffeOptimizeImage(rawFile)
+            : rawFile;
 
         // UX-only pre-check; the Worker enforces the real per-scope limit.
         const maxMb = parseInt(field.dataset.maxMb, 10) || 5;
@@ -15,8 +20,6 @@ document.querySelectorAll('.image-upload-field').forEach(function (field) {
             fileInput.value = '';
             return;
         }
-
-        status.textContent = 'Uploading...';
 
         const form = new FormData();
         form.append('file', file);

@@ -199,6 +199,8 @@ require_once __DIR__ . '/../includes/header.php';
         } else if (m.message_type === 'image' && m.image_url) {
             const img = document.createElement('img');
             img.src = m.image_url;
+            img.loading = 'lazy';
+            img.decoding = 'async';
             img.className = 'rounded-xl max-w-full max-h-64 object-cover';
             bubble.appendChild(img);
         } else {
@@ -279,9 +281,13 @@ require_once __DIR__ . '/../includes/header.php';
     });
 
     document.getElementById('chat-image-input').addEventListener('change', async function (e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        status.textContent = 'Uploading photo...';
+        const rawFile = e.target.files[0];
+        if (!rawFile) return;
+        status.textContent = 'Optimizing & uploading photo...';
+
+        const file = window.higoffeOptimizeImage
+            ? await window.higoffeOptimizeImage(rawFile)
+            : rawFile;
 
         const form = new FormData();
         form.append('file', file);
