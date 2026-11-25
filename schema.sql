@@ -40,6 +40,7 @@ CREATE TABLE products (
     base_price     NUMERIC(10,2) NOT NULL,
     image_url      VARCHAR(255),
     is_available   BOOLEAN NOT NULL DEFAULT TRUE,
+    is_deleted     BOOLEAN NOT NULL DEFAULT FALSE,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -75,6 +76,7 @@ CREATE TABLE posts (
     visibility     VARCHAR(10) NOT NULL DEFAULT 'public' CHECK (visibility IN ('public','cafe_only')),
     caption        TEXT,
     image_url      VARCHAR(255),
+    is_deleted     BOOLEAN NOT NULL DEFAULT FALSE,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

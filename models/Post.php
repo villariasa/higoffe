@@ -28,9 +28,9 @@ class Post {
                 JOIN users u ON p.author_user_id = u.user_id
                 LEFT JOIN cafes c ON p.cafe_id = c.cafe_id
                 LEFT JOIN cafes tc ON p.tagged_cafe_id = tc.cafe_id
-                LEFT JOIN products tp ON p.product_id = tp.product_id";
+                LEFT JOIN products tp ON p.product_id = tp.product_id AND tp.is_deleted = FALSE";
         $params = ["viewer_user_id" => $viewer_user_id];
-        $conditions = [];
+        $conditions = ["p.is_deleted = FALSE"];
         if ($only_cafe_id !== null) {
             // A café's page shows posts authored AS the café plus
             // check-ins tagged at it — including cafe_only posts, since
@@ -73,8 +73,8 @@ class Post {
                 JOIN users u ON p.author_user_id = u.user_id
                 LEFT JOIN cafes c ON p.cafe_id = c.cafe_id
                 LEFT JOIN cafes tc ON p.tagged_cafe_id = tc.cafe_id
-                LEFT JOIN products tp ON p.product_id = tp.product_id
-                WHERE p.post_id = :post_id";
+                LEFT JOIN products tp ON p.product_id = tp.product_id AND tp.is_deleted = FALSE
+                WHERE p.post_id = :post_id AND p.is_deleted = FALSE";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(["viewer_user_id" => $viewer_user_id, "post_id" => $post_id]);
         return $stmt->fetch();
@@ -107,12 +107,10 @@ class Post {
         return $stmt->fetchColumn();
     }
 
+    // Soft delete: the row is flagged, not destroyed — likes/comments
+    // stay intact and the post is recoverable straight from the DB.
     public function delete(int $post_id) {
-        // Likes/comments reference posts by FK — delete children first or
-        // Postgres rejects the delete on any post that has engagement.
-        $this->pdo->prepare("DELETE FROM post_likes WHERE post_id = :post_id")->execute(["post_id" => $post_id]);
-        $this->pdo->prepare("DELETE FROM post_comments WHERE post_id = :post_id")->execute(["post_id" => $post_id]);
-        $sql = "DELETE FROM posts WHERE post_id = :post_id";
+        $sql = "UPDATE posts SET is_deleted = TRUE WHERE post_id = :post_id";
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute(["post_id" => $post_id]);
     }

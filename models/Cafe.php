@@ -128,6 +128,8 @@ class Cafe {
     public function setVerified(int $cafe_id, bool $is_verified) {
         $sql = "UPDATE cafes SET is_verified = :is_verified WHERE cafe_id = :cafe_id";
         $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute(["is_verified" => $is_verified, "cafe_id" => $cafe_id]);
+        // pdo_pgsql turns PHP false into '' which Postgres rejects for
+        // boolean columns — bind as 'true'/'false' strings instead.
+        return $stmt->execute(["is_verified" => $is_verified ? 'true' : 'false', "cafe_id" => $cafe_id]);
     }
 }

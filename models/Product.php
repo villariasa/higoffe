@@ -7,7 +7,7 @@ class Product {
     }
 
     public function getByCafe(int $cafe_id) {
-        $sql = "SELECT * FROM products WHERE cafe_id = :cafe_id ORDER BY product_id";
+        $sql = "SELECT * FROM products WHERE cafe_id = :cafe_id AND is_deleted = FALSE ORDER BY product_id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(["cafe_id" => $cafe_id]);
         return $stmt->fetchAll();
@@ -25,7 +25,7 @@ class Product {
             : "";
         $sql = "SELECT p.*" . self::SOCIAL_COLS . $liked_col . "
                 FROM products p
-                WHERE p.cafe_id = :cafe_id AND p.is_available = TRUE
+                WHERE p.cafe_id = :cafe_id AND p.is_available = TRUE AND p.is_deleted = FALSE
                 ORDER BY p.product_id";
         $stmt = $this->pdo->prepare($sql);
         $params = ["cafe_id" => $cafe_id];
@@ -42,7 +42,7 @@ class Product {
                        EXISTS (SELECT 1 FROM product_likes plv WHERE plv.product_id = p.product_id AND plv.user_id = :viewer) AS liked_by_viewer
                 FROM products p
                 JOIN cafes c ON p.cafe_id = c.cafe_id
-                WHERE p.product_id = :product_id";
+                WHERE p.product_id = :product_id AND p.is_deleted = FALSE";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(["product_id" => $product_id, "viewer" => $viewer_user_id]);
         return $stmt->fetch();
@@ -56,7 +56,7 @@ class Product {
                        (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.product_id = p.product_id) AS times_ordered
                 FROM products p
                 JOIN cafes c ON p.cafe_id = c.cafe_id
-                WHERE p.is_available = TRUE
+                WHERE p.is_available = TRUE AND p.is_deleted = FALSE
                 ORDER BY times_ordered DESC, p.created_at DESC
                 LIMIT :limit";
         $stmt = $this->pdo->prepare($sql);
@@ -66,7 +66,7 @@ class Product {
     }
 
     public function getById(int $product_id) {
-        $sql = "SELECT * FROM products WHERE product_id = :product_id";
+        $sql = "SELECT * FROM products WHERE product_id = :product_id AND is_deleted = FALSE";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(["product_id" => $product_id]);
         return $stmt->fetch();
@@ -98,13 +98,18 @@ class Product {
             "description"  => $description,
             "base_price"   => $base_price,
             "image_url"    => $image_url,
-            "is_available" => $is_available,
+            // pdo_pgsql turns PHP false into '' which Postgres rejects
+            // for boolean columns — bind as 'true'/'false' strings.
+            "is_available" => $is_available ? 'true' : 'false',
             "product_id"   => $product_id,
         ]);
     }
 
+    // Soft delete: flag the row and hide it from the menu. A hard DELETE
+    // would also violate FKs for any product that was ever ordered
+    // (order_items references it) — history must survive the menu.
     public function delete(int $product_id) {
-        $sql = "DELETE FROM products WHERE product_id = :product_id";
+        $sql = "UPDATE products SET is_deleted = TRUE, is_available = FALSE WHERE product_id = :product_id";
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute(["product_id" => $product_id]);
     }

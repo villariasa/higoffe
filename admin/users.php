@@ -51,7 +51,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php endif; ?>
                     </td>
                     <td class="px-4 py-3 text-right">
-                        <form method="post" class="inline">
+                        <form method="post" class="inline" data-confirm="<?= $u['is_suspended'] ? 'Unsuspend' : 'Suspend' ?> this account?">
                             <input type="hidden" name="user_id" value="<?= (int) $u['user_id'] ?>">
                             <input type="hidden" name="action" value="<?= $u['is_suspended'] ? 'unsuspend' : 'suspend' ?>">
                             <button type="submit" class="rounded-full border px-3 py-1 text-[11px] font-bold <?= $u['is_suspended'] ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-red-300 text-red-600 hover:bg-red-50' ?>">

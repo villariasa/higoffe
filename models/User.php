@@ -67,7 +67,9 @@ class User {
     public function setSuspended(int $user_id, bool $is_suspended) {
         $sql = "UPDATE users SET is_suspended = :is_suspended WHERE user_id = :user_id";
         $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute(["is_suspended" => $is_suspended, "user_id" => $user_id]);
+        // pdo_pgsql turns PHP false into '' which Postgres rejects for
+        // boolean columns — bind as 'true'/'false' strings instead.
+        return $stmt->execute(["is_suspended" => $is_suspended ? 'true' : 'false', "user_id" => $user_id]);
     }
 
     // Admin user list

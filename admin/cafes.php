@@ -56,7 +56,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php endif; ?>
                     </td>
                     <td class="px-4 py-3 text-right">
-                        <form method="post" class="inline">
+                        <form method="post" class="inline" data-confirm="<?= $c['is_verified'] ? 'Remove verification from' : 'Verify' ?> this café?">
                             <input type="hidden" name="cafe_id" value="<?= (int) $c['cafe_id'] ?>">
                             <input type="hidden" name="action" value="<?= $c['is_verified'] ? 'unverify' : 'verify' ?>">
                             <button type="submit" class="rounded-full border px-3 py-1 text-[11px] font-bold <?= $c['is_verified'] ? 'border-stone-300 text-stone-500 hover:bg-stone-50' : 'border-accent text-accent hover:bg-amber-50' ?>">

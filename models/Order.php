@@ -147,7 +147,7 @@ class Order {
                 FROM order_statuses os
                 LEFT JOIN orders o ON o.status_id = os.status_id
                     AND o.created_at >= :start_date AND o.created_at < :end_date
-                GROUP BY os.status_label
+                GROUP BY os.status_id, os.status_label
                 ORDER BY os.status_id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(["start_date" => $start_date, "end_date" => $end_date]);

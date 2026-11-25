@@ -35,7 +35,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </p>
                     <p class="text-[11px] text-stone-400">Reported by <?= htmlspecialchars($r['reporter_name'], ENT_QUOTES, 'UTF-8') ?> · <?= htmlspecialchars(time_ago($r['created_at']), ENT_QUOTES, 'UTF-8') ?></p>
                 </div>
-                <form method="post">
+                <form method="post" data-confirm="Mark this report resolved?">
                     <input type="hidden" name="report_id" value="<?= (int) $r['report_id'] ?>">
                     <button type="submit" class="rounded-full border border-green-300 px-3 py-1 text-[11px] font-bold text-green-700 hover:bg-green-50">Mark resolved</button>
                 </form>
