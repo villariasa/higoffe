@@ -1,0 +1,155 @@
+<?php
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/Cafe.php';
+require_once __DIR__ . '/../models/Product.php';
+require_once __DIR__ . '/../models/ProductSize.php';
+require_once __DIR__ . '/../models/ProductAddon.php';
+require_once __DIR__ . '/../includes/auth_check.php';
+require_role('seller');
+
+$product_id = (int) ($_GET['id'] ?? 0);
+
+$pdo = (new Database())->connect();
+$cafeModel = new Cafe($pdo);
+$cafe = $cafeModel->getByOwner((int) $_SESSION['user_id']);
+
+$productModel = new Product($pdo);
+$product = $productModel->getById($product_id);
+
+// Ownership check — a seller can only edit their own café's products.
+if (!$cafe || !$product || (int) $product['cafe_id'] !== (int) $cafe['cafe_id']) {
+    header("Location: /menu/index.php");
+    exit;
+}
+
+$sizeModel = new ProductSize($pdo);
+$addonModel = new ProductAddon($pdo);
+$error = '';
+$saved = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? 'update_product';
+
+    if ($action === 'update_product') {
+        $product_name = (string) trim($_POST['product_name'] ?? '');
+        $description  = (string) trim($_POST['description'] ?? '');
+        $base_price   = (float) ($_POST['base_price'] ?? 0);
+        $image_url    = (string) trim($_POST['image_url'] ?? '');
+        $is_available = isset($_POST['is_available']);
+
+        if ($product_name === '' || $base_price <= 0) {
+            $error = 'Product name and a price greater than 0 are required.';
+        } else {
+            $productModel->update($product_id, $product_name, $description, $base_price, $image_url, $is_available);
+            $saved = true;
+        }
+    } elseif ($action === 'add_size') {
+        $size_label  = (string) trim($_POST['size_label'] ?? '');
+        $price_addon = (float) ($_POST['price_addon'] ?? 0);
+        if ($size_label !== '') {
+            $sizeModel->create($product_id, $size_label, $price_addon);
+        }
+    } elseif ($action === 'delete_size') {
+        $sizeModel->delete((int) ($_POST['size_id'] ?? 0));
+    } elseif ($action === 'add_addon') {
+        $addon_label = (string) trim($_POST['addon_label'] ?? '');
+        $addon_price = (float) ($_POST['addon_price'] ?? 0);
+        if ($addon_label !== '') {
+            $addonModel->create($product_id, $addon_label, $addon_price);
+        }
+    } elseif ($action === 'delete_addon') {
+        $addonModel->delete((int) ($_POST['addon_id'] ?? 0));
+    }
+
+    $product = $productModel->getById($product_id);
+}
+
+$sizes = $sizeModel->getByProduct($product_id);
+$addons = $addonModel->getByProduct($product_id);
+
+require_once __DIR__ . '/../includes/header.php';
+?>
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="bg-white border border-stone-200 rounded-lg p-6">
+        <h1 class="text-xl font-bold mb-4">Edit product</h1>
+
+        <?php if ($saved): ?>
+            <p class="bg-green-50 text-green-700 text-sm rounded p-3 mb-4">Saved.</p>
+        <?php endif; ?>
+        <?php if ($error !== ''): ?>
+            <p class="bg-red-50 text-red-700 text-sm rounded p-3 mb-4"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+        <?php endif; ?>
+
+        <form method="post" class="space-y-3">
+            <input type="hidden" name="action" value="update_product">
+            <div>
+                <label class="block text-sm text-stone-600 mb-1">Product name</label>
+                <input type="text" name="product_name" required value="<?= htmlspecialchars($product['product_name'], ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
+            </div>
+            <div>
+                <label class="block text-sm text-stone-600 mb-1">Description</label>
+                <textarea name="description" rows="3" class="w-full border border-stone-300 rounded p-2"><?= htmlspecialchars($product['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+            </div>
+            <div>
+                <label class="block text-sm text-stone-600 mb-1">Base price (&#8369;)</label>
+                <input type="number" step="0.01" min="0" name="base_price" required value="<?= htmlspecialchars((string) $product['base_price'], ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
+            </div>
+            <div>
+                <label class="block text-sm text-stone-600 mb-1">Image URL</label>
+                <input type="text" name="image_url" value="<?= htmlspecialchars($product['image_url'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
+            </div>
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="is_available" <?= $product['is_available'] ? 'checked' : '' ?>>
+                Available on menu
+            </label>
+            <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Save</button>
+        </form>
+    </div>
+
+    <div class="bg-white border border-stone-200 rounded-lg p-6">
+        <h2 class="font-bold mb-3">Sizes</h2>
+        <ul class="mb-3 space-y-1">
+            <?php foreach ($sizes as $size): ?>
+                <li class="flex items-center justify-between text-sm">
+                    <span><?= htmlspecialchars($size['size_label'], ENT_QUOTES, 'UTF-8') ?> (+&#8369;<?= number_format((float) $size['price_addon'], 2) ?>)</span>
+                    <form method="post">
+                        <input type="hidden" name="action" value="delete_size">
+                        <input type="hidden" name="size_id" value="<?= (int) $size['size_id'] ?>">
+                        <button type="submit" class="text-red-600 underline">Remove</button>
+                    </form>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+        <form method="post" class="flex gap-2">
+            <input type="hidden" name="action" value="add_size">
+            <input type="text" name="size_label" placeholder="e.g. Large" required class="flex-1 border border-stone-300 rounded p-2 text-sm">
+            <input type="number" step="0.01" name="price_addon" placeholder="+&#8369;" class="w-24 border border-stone-300 rounded p-2 text-sm">
+            <button type="submit" class="bg-stone-800 text-white rounded px-3 text-sm">Add</button>
+        </form>
+    </div>
+
+    <div class="bg-white border border-stone-200 rounded-lg p-6">
+        <h2 class="font-bold mb-3">Add-ons</h2>
+        <ul class="mb-3 space-y-1">
+            <?php foreach ($addons as $addon): ?>
+                <li class="flex items-center justify-between text-sm">
+                    <span><?= htmlspecialchars($addon['addon_label'], ENT_QUOTES, 'UTF-8') ?> (+&#8369;<?= number_format((float) $addon['addon_price'], 2) ?>)</span>
+                    <form method="post">
+                        <input type="hidden" name="action" value="delete_addon">
+                        <input type="hidden" name="addon_id" value="<?= (int) $addon['addon_id'] ?>">
+                        <button type="submit" class="text-red-600 underline">Remove</button>
+                    </form>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+        <form method="post" class="flex gap-2">
+            <input type="hidden" name="action" value="add_addon">
+            <input type="text" name="addon_label" placeholder="e.g. Extra Shot" required class="flex-1 border border-stone-300 rounded p-2 text-sm">
+            <input type="number" step="0.01" name="addon_price" placeholder="+&#8369;" class="w-24 border border-stone-300 rounded p-2 text-sm">
+            <button type="submit" class="bg-stone-800 text-white rounded px-3 text-sm">Add</button>
+        </form>
+    </div>
+
+    <a href="/menu/index.php" class="text-amber-700 underline text-sm">&larr; Back to menu</a>
+</div>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>
