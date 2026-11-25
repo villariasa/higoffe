@@ -21,9 +21,10 @@ class Mailer {
     private string $from_name;
     private string $encryption; // 'tls' or 'ssl'
     private string $resend_api_key;
+    private string $brevo_api_key;
 
     public function __construct(?PDO $pdo = null) {
-        $host = $port = $username = $password = $from_email = $from_name = $encryption = $resend_api_key = null;
+        $host = $port = $username = $password = $from_email = $from_name = $encryption = $resend_api_key = $brevo_api_key = null;
 
         if ($pdo) {
             require_once __DIR__ . '/../models/Settings.php';
@@ -36,6 +37,7 @@ class Mailer {
             $from_name      = $settings->get('smtp_from_name');
             $encryption     = $settings->get('smtp_encryption');
             $resend_api_key = $settings->get('resend_api_key');
+            $brevo_api_key  = $settings->get('brevo_api_key');
         }
 
         if (!$host || !$port || !$username || !$password || !$from_email) {
@@ -50,8 +52,11 @@ class Mailer {
         if (!$resend_api_key) {
             $resend_api_key = getenv('RESEND_API_KEY') ?: null;
         }
+        if (!$brevo_api_key) {
+            $brevo_api_key = getenv('BREVO_API_KEY') ?: null;
+        }
 
-        if (!$host || !$port || !$username || !$password || !$from_email || !$resend_api_key) {
+        if (!$host || !$port || !$username || !$password || !$from_email || !$resend_api_key || !$brevo_api_key) {
             $credentials_file = __DIR__ . '/smtp_credentials.php';
             if (file_exists($credentials_file)) {
                 require_once $credentials_file;
@@ -63,6 +68,7 @@ class Mailer {
                 $from_name      = $from_name ?: (defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : null);
                 $encryption     = $encryption ?: (defined('SMTP_ENCRYPTION') ? SMTP_ENCRYPTION : null);
                 $resend_api_key = $resend_api_key ?: (defined('RESEND_API_KEY') ? RESEND_API_KEY : null);
+                $brevo_api_key  = $brevo_api_key ?: (defined('BREVO_API_KEY') ? BREVO_API_KEY : null);
             }
         }
 
@@ -74,11 +80,15 @@ class Mailer {
         $this->from_name      = (string) ($from_name ?: 'Higoffe');
         $this->encryption     = (string) ($encryption ?: 'tls');
         $this->resend_api_key = (string) $resend_api_key;
+        $this->brevo_api_key  = (string) $brevo_api_key;
     }
 
     public function send(string $to_email, string $subject, string $html_body): bool {
-        // Prefer Resend HTTPS API when configured — Render free tier blocks
+        // Prefer HTTPS APIs when configured — Render free tier blocks
         // outbound SMTP ports (25/465/587), whereas HTTPS (443) always works.
+        if ($this->brevo_api_key !== '') {
+            return $this->sendViaBrevo($to_email, $subject, $html_body);
+        }
         if ($this->resend_api_key !== '') {
             return $this->sendViaResend($to_email, $subject, $html_body);
         }
@@ -136,6 +146,22 @@ class Mailer {
         }
     }
 
+    private function sendViaBrevo(string $to_email, string $subject, string $html_body): bool {
+        $from_email = $this->from_email ?: $this->username;
+        $payload = json_encode([
+            'sender'      => ['name' => $this->from_name, 'email' => $from_email],
+            'to'          => [['email' => $to_email]],
+            'subject'     => $subject,
+            'htmlContent' => $html_body,
+        ]);
+        return $this->postJson(
+            'https://api.brevo.com/v3/smtp/email',
+            ['api-key: ' . $this->brevo_api_key, 'Content-Type: application/json'],
+            $payload,
+            'Brevo'
+        );
+    }
+
     private function sendViaResend(string $to_email, string $subject, string $html_body): bool {
         $from_email = $this->from_email ?: 'onboarding@resend.dev';
         // Public webmail domains (gmail.com, etc.) can never be verified on
@@ -150,17 +176,22 @@ class Mailer {
             'subject' => $subject,
             'html'    => $html_body,
         ]);
+        return $this->postJson(
+            'https://api.resend.com/emails',
+            ['Authorization: Bearer ' . $this->resend_api_key, 'Content-Type: application/json'],
+            $payload,
+            'Resend'
+        );
+    }
 
+    private function postJson(string $url, array $headers, string $payload, string $provider): bool {
         if (function_exists('curl_init')) {
-            $ch = curl_init('https://api.resend.com/emails');
+            $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_POST           => true,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT        => 15,
-                CURLOPT_HTTPHEADER     => [
-                    'Authorization: Bearer ' . $this->resend_api_key,
-                    'Content-Type: application/json',
-                ],
+                CURLOPT_HTTPHEADER     => $headers,
                 CURLOPT_POSTFIELDS     => $payload,
             ]);
             $resp = curl_exec($ch);
@@ -169,7 +200,7 @@ class Mailer {
             curl_close($ch);
 
             if ($resp === false || $code < 200 || $code >= 300) {
-                error_log("Mailer (Resend): HTTP {$code} — " . ($err ?: $resp));
+                error_log("Mailer ({$provider}): HTTP {$code} — " . ($err ?: $resp));
                 return false;
             }
             return true;
@@ -178,16 +209,16 @@ class Mailer {
         $ctx = stream_context_create([
             'http' => [
                 'method'        => 'POST',
-                'header'        => "Authorization: Bearer {$this->resend_api_key}\r\nContent-Type: application/json\r\n",
+                'header'        => implode("\r\n", $headers) . "\r\n",
                 'content'       => $payload,
                 'timeout'       => 15,
                 'ignore_errors' => true,
             ],
         ]);
-        $resp = @file_get_contents('https://api.resend.com/emails', false, $ctx);
+        $resp = @file_get_contents($url, false, $ctx);
         $status_line = $http_response_header[0] ?? '';
         if ($resp === false || !preg_match('/\s2\d\d\s/', $status_line)) {
-            error_log("Mailer (Resend): {$status_line} — {$resp}");
+            error_log("Mailer ({$provider}): {$status_line} — {$resp}");
             return false;
         }
         return true;

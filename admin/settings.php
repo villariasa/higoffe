@@ -12,6 +12,8 @@ $error = '';
 $saved = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $brevo_api_key   = (string) trim($_POST['brevo_api_key'] ?? '');
+    $clear_brevo     = isset($_POST['clear_brevo_key']);
     $resend_api_key  = (string) trim($_POST['resend_api_key'] ?? '');
     $clear_resend    = isset($_POST['clear_resend_key']);
     $smtp_host       = (string) trim($_POST['smtp_host'] ?? '');
@@ -22,10 +24,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $smtp_from_name  = (string) trim($_POST['smtp_from_name'] ?? '');
     $smtp_encryption = ($_POST['smtp_encryption'] ?? '') === 'ssl' ? 'ssl' : 'tls';
 
+    $existing_brevo  = (string) ($settingsModel->get('brevo_api_key') ?? '');
     $existing_resend = (string) ($settingsModel->get('resend_api_key') ?? '');
+    $has_brevo  = !$clear_brevo  && ($brevo_api_key !== ''  || $existing_brevo !== '');
     $has_resend = !$clear_resend && ($resend_api_key !== '' || $existing_resend !== '');
 
-    if ($has_resend) {
+    if ($has_brevo || $has_resend) {
+        if ($clear_brevo) {
+            $settingsModel->set('brevo_api_key', '');
+        } elseif ($brevo_api_key !== '') {
+            $settingsModel->set('brevo_api_key', $brevo_api_key);
+        }
         if ($clear_resend) {
             $settingsModel->set('resend_api_key', '');
         } elseif ($resend_api_key !== '') {
@@ -40,11 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $settingsModel->set('smtp_encryption', $smtp_encryption);
         $saved = true;
     } elseif ($smtp_host === '' || $smtp_port === '' || $smtp_username === '' || $smtp_from_email === '') {
-        $error = 'Enter a Resend API key, or fill in SMTP host, port, username, and from-email.';
+        $error = 'Enter a Brevo/Resend API key, or fill in SMTP host, port, username, and from-email.';
     } else {
-        if ($clear_resend) {
-            $settingsModel->set('resend_api_key', '');
-        }
+        if ($clear_brevo)  $settingsModel->set('brevo_api_key', '');
+        if ($clear_resend) $settingsModel->set('resend_api_key', '');
         $settingsModel->set('smtp_host', $smtp_host);
         $settingsModel->set('smtp_port', $smtp_port);
         $settingsModel->set('smtp_username', $smtp_username);
@@ -79,13 +87,33 @@ require_once __DIR__ . '/../includes/header.php';
     <?php endif; ?>
 
     <form method="post" class="space-y-4">
-        <!-- Resend HTTP API (recommended for Render) -->
+        <!-- Brevo HTTP API (recommended when using Gmail without a custom domain) -->
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 space-y-2">
+            <label class="block text-[11px] font-bold uppercase tracking-wide text-emerald-800">
+                Brevo API Key (Best for Gmail — no custom domain needed)
+                <?php if (!empty($current['brevo_api_key'])): ?>
+                    <span class="font-normal normal-case text-green-700">— Active ✅ (leave blank to keep)</span>
+                <?php endif; ?>
+            </label>
+            <input type="password" name="brevo_api_key" placeholder="<?= !empty($current['brevo_api_key']) ? 'xkeysib-•••••••• (already set)' : 'xkeysib-xxxxxxxxx' ?>" class="<?= $field ?>">
+            <p class="text-[11px] text-stone-500">
+                Free 300 emails/day at <a href="https://brevo.com" target="_blank" rel="noopener" class="font-semibold text-accent underline">brevo.com</a>. Verify your Gmail as a sender in Brevo, then set <strong>From email</strong> below to your Gmail.
+            </p>
+            <?php if (!empty($current['brevo_api_key'])): ?>
+                <label class="flex items-center gap-1.5 text-[11px] text-red-600 cursor-pointer">
+                    <input type="checkbox" name="clear_brevo_key" value="1" class="accent-red-600">
+                    Clear Brevo API key
+                </label>
+            <?php endif; ?>
+        </div>
+
+        <!-- Resend HTTP API -->
         <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5 space-y-2">
             <div class="flex items-center justify-between">
                 <label class="block text-[11px] font-bold uppercase tracking-wide text-amber-800">
-                    Resend API Key (Recommended)
+                    Resend API Key (Requires verified custom domain for other recipients)
                     <?php if (!empty($current['resend_api_key'])): ?>
-                        <span class="font-normal normal-case text-green-700">— Active ✅ (leave blank to keep)</span>
+                        <span class="font-normal normal-case text-green-700">— Set ✅ (leave blank to keep)</span>
                     <?php endif; ?>
                 </label>
             </div>

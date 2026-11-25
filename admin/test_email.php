@@ -44,8 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Also show current resolved config (passwords redacted).
 require_once __DIR__ . '/../models/Settings.php';
 $settings = new Settings($pdo);
+$has_brevo  = (bool) ($settings->get('brevo_api_key') ?: getenv('BREVO_API_KEY'));
+$has_resend = (bool) ($settings->get('resend_api_key') ?: getenv('RESEND_API_KEY'));
 $config = [
-    'transport'       => ($settings->get('resend_api_key') ?: getenv('RESEND_API_KEY')) ? 'Resend HTTPS API ✅' : 'SMTP (ports 587/465 blocked on Render free tier)',
+    'transport'       => $has_brevo ? 'Brevo HTTPS API ✅' : ($has_resend ? 'Resend HTTPS API ✅' : 'SMTP (ports 587/465 blocked on Render free tier)'),
+    'brevo_api_key'   => $settings->get('brevo_api_key') ? '•••••••• (DB)' : (getenv('BREVO_API_KEY') ? '•••••••• (env)' : '(not set)'),
     'resend_api_key'  => $settings->get('resend_api_key') ? '•••••••• (DB)' : (getenv('RESEND_API_KEY') ? '•••••••• (env)' : '(not set)'),
     'smtp_host'       => $settings->get('smtp_host') ?: getenv('SMTP_HOST') ?: '(not set)',
     'smtp_port'       => $settings->get('smtp_port') ?: getenv('SMTP_PORT') ?: '(not set)',
