@@ -2,6 +2,8 @@
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/Product.php';
 require_once __DIR__ . '/../models/ProductReview.php';
+require_once __DIR__ . '/../models/Cafe.php';
+require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../includes/components.php';
 
@@ -32,6 +34,10 @@ if ($is_customer && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?
         $review_error = 'Pick a rating from 1 to 5.';
     } else {
         $reviewModel->upsert($product_id, $user_id, $rating, $review_text);
+        $cafe = (new Cafe($pdo))->getById((int) $product['cafe_id']);
+        if ($cafe && (int) $cafe['owner_user_id'] !== $user_id) {
+            (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' left a ' . $rating . '-star review on "' . $product['product_name'] . '".');
+        }
         header("Location: /menu/view.php?id={$product_id}");
         exit;
     }

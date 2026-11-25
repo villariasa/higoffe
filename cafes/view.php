@@ -5,6 +5,7 @@ require_once __DIR__ . '/../models/Product.php';
 require_once __DIR__ . '/../models/Post.php';
 require_once __DIR__ . '/../models/Follow.php';
 require_once __DIR__ . '/../models/CafeReview.php';
+require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../includes/components.php';
 
@@ -43,6 +44,9 @@ if ($is_customer && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?
         $review_error = 'Pick a rating from 1 to 5.';
     } else {
         $reviewModel->upsert($cafe_id, (int) $_SESSION['user_id'], $rating, $review_text);
+        if ((int) $cafe['owner_user_id'] !== (int) $_SESSION['user_id']) {
+            (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' left a ' . $rating . '-star review on ' . $cafe['cafe_name'] . '.');
+        }
         header("Location: /cafes/view.php?id={$cafe_id}");
         exit;
     }

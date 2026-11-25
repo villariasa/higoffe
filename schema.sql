@@ -125,7 +125,12 @@ CREATE TABLE conversations (
     status                  VARCHAR(20) NOT NULL DEFAULT 'waiting'
                              CHECK (status IN ('waiting','active','resolved')),
     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_message_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    last_message_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Read receipts + typing indicators (polled, not pushed — see migration 010).
+    customer_last_read_id   INTEGER NOT NULL DEFAULT 0,
+    seller_last_read_id     INTEGER NOT NULL DEFAULT 0,
+    customer_typing_at      TIMESTAMPTZ NULL,
+    seller_typing_at        TIMESTAMPTZ NULL
 );
 
 CREATE TABLE messages (

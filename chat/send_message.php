@@ -34,5 +34,7 @@ if (!$is_participant || !$has_content || !Uploads::isAllowedMediaUrl($image_url)
 $messageModel = new Message($pdo);
 $message_id = $messageModel->create($conversation_id, $user_id, $message_type, $body, null, $image_url);
 $conversationModel->touchLastMessageAt($conversation_id);
+$conversationModel->clearTyping($conversation_id, $role);
+$conversationModel->markRead($conversation_id, $role, $message_id);
 
 echo json_encode(["success" => true, "message_id" => $message_id]);

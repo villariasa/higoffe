@@ -109,4 +109,46 @@ class Conversation {
         $stmt->execute(["cafe_id" => $cafe_id]);
         return (int) $stmt->fetchColumn();
     }
+
+    // Typing + read-receipt state, piggybacked on the existing poll cycle
+    // instead of a WebSocket server — $viewer_role is always 'customer' or
+    // 'seller' from $_SESSION['role'], never raw user input, so it's safe
+    // to use for picking which column to touch.
+    public function setTyping(int $conversation_id, string $viewer_role): void {
+        $col = $viewer_role === 'seller' ? 'seller_typing_at' : 'customer_typing_at';
+        $sql = "UPDATE conversations SET {$col} = NOW() WHERE conversation_id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["id" => $conversation_id]);
+    }
+
+    public function clearTyping(int $conversation_id, string $viewer_role): void {
+        $col = $viewer_role === 'seller' ? 'seller_typing_at' : 'customer_typing_at';
+        $sql = "UPDATE conversations SET {$col} = NULL WHERE conversation_id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["id" => $conversation_id]);
+    }
+
+    public function markRead(int $conversation_id, string $viewer_role, int $message_id): void {
+        if ($message_id <= 0) return;
+        $col = $viewer_role === 'seller' ? 'seller_last_read_id' : 'customer_last_read_id';
+        $sql = "UPDATE conversations SET {$col} = GREATEST({$col}, :message_id) WHERE conversation_id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["message_id" => $message_id, "id" => $conversation_id]);
+    }
+
+    // Returns the OTHER participant's live status for the viewer's poll —
+    // "is the other person typing right now" and "what message id have
+    // they read up to".
+    public function getOtherStatus(int $conversation_id, string $viewer_role): array {
+        $typing_col = $viewer_role === 'seller' ? 'customer_typing_at' : 'seller_typing_at';
+        $read_col = $viewer_role === 'seller' ? 'customer_last_read_id' : 'seller_last_read_id';
+        $sql = "SELECT {$typing_col} AS typing_at, {$read_col} AS read_id
+                FROM conversations WHERE conversation_id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["id" => $conversation_id]);
+        $row = $stmt->fetch();
+        if (!$row) return ["other_typing" => false, "other_read_id" => 0];
+        $typing = $row['typing_at'] !== null && strtotime($row['typing_at']) > time() - 4;
+        return ["other_typing" => $typing, "other_read_id" => (int) $row['read_id']];
+    }
 }

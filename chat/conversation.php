@@ -43,8 +43,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $body = (string) trim($_POST['body'] ?? '');
     if ($body !== '') {
         $messageModel = new Message($pdo);
-        $messageModel->create($conversation_id, $user_id, 'text', $body);
+        $sent_id = $messageModel->create($conversation_id, $user_id, 'text', $body);
         $conversationModel->touchLastMessageAt($conversation_id);
+        $conversationModel->clearTyping($conversation_id, $role);
+        $conversationModel->markRead($conversation_id, $role, $sent_id);
     }
     header("Location: /chat/conversation.php?id={$conversation_id}");
     exit;
@@ -128,6 +130,16 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     <?php endif; ?>
 
+    <!-- Typing indicator -->
+    <p id="typing-indicator" class="hidden items-center gap-1 bg-white px-4 pb-1 text-[11px] italic text-stone-400">
+        <span class="flex gap-0.5">
+            <span class="h-1 w-1 animate-bounce rounded-full bg-stone-400" style="animation-delay:0ms"></span>
+            <span class="h-1 w-1 animate-bounce rounded-full bg-stone-400" style="animation-delay:150ms"></span>
+            <span class="h-1 w-1 animate-bounce rounded-full bg-stone-400" style="animation-delay:300ms"></span>
+        </span>
+        <span><?= htmlspecialchars($other_name, ENT_QUOTES, 'UTF-8') ?> is typing...</span>
+    </p>
+
     <!-- Composer -->
     <form id="send-form" class="flex items-center gap-2 border-t border-stone-200 bg-white px-3 py-2.5 lg:rounded-b-2xl lg:border lg:border-t-stone-200">
         <label class="shrink-0 cursor-pointer text-stone-400 hover:text-accent" title="Send a photo">
@@ -159,6 +171,8 @@ require_once __DIR__ . '/../includes/header.php';
         scope: <?= json_encode($upload_auth['scope']) ?>,
     };
 
+    const typingIndicator = document.getElementById('typing-indicator');
+
     function renderBubble(m) {
         if (m.message_type === 'system') {
             const p = document.createElement('p');
@@ -168,7 +182,11 @@ require_once __DIR__ . '/../includes/header.php';
         }
         const isMine = m.sender_user_id == myUserId;
         const wrap = document.createElement('div');
-        wrap.className = 'flex items-end gap-2 ' + (isMine ? 'justify-end' : 'justify-start');
+        wrap.className = 'flex flex-col ' + (isMine ? 'items-end' : 'items-start');
+        wrap.dataset.messageId = m.message_id;
+        wrap.dataset.mine = isMine ? '1' : '0';
+        const row = document.createElement('div');
+        row.className = 'flex items-end gap-2 ' + (isMine ? 'justify-end' : 'justify-start');
         const bubble = document.createElement('div');
         bubble.className = 'max-w-[75%] rounded-2xl px-3 py-2 text-sm ' +
             (isMine ? 'bg-coffee text-white rounded-br-md' : 'bg-white border border-stone-200 text-stone-800 rounded-bl-md');
@@ -186,8 +204,24 @@ require_once __DIR__ . '/../includes/header.php';
         } else {
             bubble.textContent = m.body || '';
         }
-        wrap.appendChild(bubble);
+        row.appendChild(bubble);
+        wrap.appendChild(row);
         return wrap;
+    }
+
+    // Shows "Seen" under the single latest message I sent that the other
+    // party has read up to — not on every past message, Messenger-style.
+    function updateReadReceipt(otherReadId) {
+        list.querySelectorAll('.seen-label').forEach(function (el) { el.remove(); });
+        if (!otherReadId) return;
+        const mine = Array.from(list.querySelectorAll('[data-mine="1"]'))
+            .filter(function (el) { return parseInt(el.dataset.messageId, 10) <= otherReadId; });
+        const last = mine[mine.length - 1];
+        if (!last) return;
+        const seen = document.createElement('span');
+        seen.className = 'seen-label mt-0.5 mr-1 text-[10px] text-stone-400';
+        seen.textContent = 'Seen';
+        last.appendChild(seen);
     }
 
     async function poll() {
@@ -195,13 +229,29 @@ require_once __DIR__ . '/../includes/header.php';
         // leak this interval forever — self-clear once our DOM is gone.
         if (!document.body.contains(list)) { clearInterval(pollTimer); return; }
         if (document.hidden) return;
-        const res = await fetch('/chat/poll_messages.php?conversation_id=' + conversationId + '&after_id=' + afterId);
-        const rows = await res.json();
+        const res = await fetch('/chat/poll_messages.php?conversation_id=' + conversationId + '&after_id=' + afterId + '&my_read_id=' + afterId);
+        const data = await res.json();
+        const rows = data.messages || [];
         rows.forEach(function (m) {
             list.appendChild(renderBubble(m));
             afterId = Math.max(afterId, m.message_id);
         });
         if (rows.length) list.scrollTop = list.scrollHeight;
+        typingIndicator.classList.toggle('hidden', !data.other_typing);
+        typingIndicator.classList.toggle('flex', !!data.other_typing);
+        updateReadReceipt(data.other_read_id || 0);
+    }
+
+    let lastTypingPing = 0;
+    function pingTyping() {
+        const now = Date.now();
+        if (now - lastTypingPing < 1500) return;
+        lastTypingPing = now;
+        fetch('/chat/typing.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'conversation_id=' + conversationId
+        });
     }
 
     async function sendText(body) {
@@ -213,6 +263,8 @@ require_once __DIR__ . '/../includes/header.php';
         });
         poll();
     }
+
+    document.getElementById('body-input').addEventListener('input', pingTyping);
 
     document.getElementById('send-form').addEventListener('submit', function (e) {
         e.preventDefault();
@@ -259,6 +311,7 @@ require_once __DIR__ . '/../includes/header.php';
     });
 
     list.scrollTop = list.scrollHeight;
+    poll(); // immediate sync — marks read + shows typing/seen without waiting out the interval
     const pollTimer = setInterval(poll, 3000);
 })();
 </script>
