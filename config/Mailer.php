@@ -138,6 +138,12 @@ class Mailer {
 
     private function sendViaResend(string $to_email, string $subject, string $html_body): bool {
         $from_email = $this->from_email ?: 'onboarding@resend.dev';
+        // Public webmail domains (gmail.com, etc.) can never be verified on
+        // Resend — automatically fall back to Resend's sandbox sender so
+        // switching from Gmail SMTP works out of the box.
+        if (preg_match('/@(gmail|yahoo|outlook|hotmail|live)\.com$/i', $from_email)) {
+            $from_email = 'onboarding@resend.dev';
+        }
         $payload = json_encode([
             'from'    => "{$this->from_name} <{$from_email}>",
             'to'      => [$to_email],
