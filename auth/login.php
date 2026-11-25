@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../includes/password_field.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -50,10 +51,7 @@ require_once __DIR__ . '/../includes/header.php';
             <label class="block text-sm text-stone-600 mb-1">Email</label>
             <input type="email" name="email" required value="<?= htmlspecialchars($submitted_email, ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
         </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Password</label>
-            <input type="password" name="password" required class="w-full border border-stone-300 rounded p-2">
-        </div>
+        <?php render_password_field('password', 'Password'); ?>
         <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Log in</button>
     </form>
 
@@ -63,4 +61,5 @@ require_once __DIR__ . '/../includes/header.php';
         or <a href="/auth/register_seller.php" class="text-amber-700 underline">register your café</a>.
     </p>
 </div>
+<script src="/includes/password_toggle.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
