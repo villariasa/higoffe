@@ -24,6 +24,8 @@ CREATE TABLE cafes (
     cafe_name      VARCHAR(150) NOT NULL,
     description    TEXT,
     address        VARCHAR(255),
+    latitude       NUMERIC(9,6),
+    longitude      NUMERIC(9,6),
     logo_url       VARCHAR(255),
     cover_url      VARCHAR(255),
     is_verified    BOOLEAN NOT NULL DEFAULT FALSE,

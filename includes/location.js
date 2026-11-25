@@ -42,9 +42,15 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         const chipLabels = document.querySelectorAll('.location-chip-label');
-        const coords = stored();
+        let coords = stored();
         const url = new URL(window.location.href);
         const urlHasCoords = url.searchParams.has('lat') && url.searchParams.has('lng');
+
+        if (!coords && urlHasCoords) {
+            coords = { lat: url.searchParams.get('lat'), lng: url.searchParams.get('lng') };
+            sessionStorage.setItem(KEY_LAT, coords.lat);
+            sessionStorage.setItem(KEY_LNG, coords.lng);
+        }
 
         if (coords) {
             chipLabels.forEach(function (el) { el.textContent = 'Near you'; });

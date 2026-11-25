@@ -19,17 +19,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $address     = (string) trim($_POST['address'] ?? '');
     $logo_url    = (string) trim($_POST['logo_url'] ?? '');
     $cover_url   = (string) trim($_POST['cover_url'] ?? '');
+    $latitude    = isset($_POST['latitude']) && $_POST['latitude'] !== '' ? (float) $_POST['latitude'] : null;
+    $longitude   = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? (float) $_POST['longitude'] : null;
 
     if ($cafe_name === '') {
         $error = 'Café name is required.';
     } elseif (!Uploads::isAllowedMediaUrl($logo_url) || !Uploads::isAllowedMediaUrl($cover_url)) {
         $error = 'Invalid image URL.';
     } elseif ($cafe) {
-        $cafeModel->update((int) $cafe['cafe_id'], $cafe_name, $description, $address, $logo_url, $cover_url);
+        $cafeModel->update((int) $cafe['cafe_id'], $cafe_name, $description, $address, $logo_url, $cover_url, $latitude, $longitude);
         $cafe = $cafeModel->getByOwner((int) $_SESSION['user_id']);
         $saved = true;
     } else {
-        $cafe_id = $cafeModel->create((int) $_SESSION['user_id'], $cafe_name, $description, $address);
+        $cafe_id = $cafeModel->create((int) $_SESSION['user_id'], $cafe_name, $description, $address, $latitude, $longitude);
         $cafe = $cafeModel->getById((int) $cafe_id);
         $saved = true;
     }
@@ -64,6 +66,19 @@ require_once __DIR__ . '/../includes/header.php';
                 <label class="mb-1 block text-xs font-semibold text-stone-500">Address</label>
                 <input type="text" name="address" value="<?= htmlspecialchars($cafe['address'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
             </div>
+            <div>
+                <div class="mb-1 flex items-center justify-between">
+                    <label class="block text-xs font-semibold text-stone-500">Coordinates (for Nearby Cafés)</label>
+                    <button type="button" id="btn-use-location" class="flex items-center gap-1 text-[11px] font-bold text-accent hover:underline">
+                        <?php icon('map-pin-solid', 'w-3 h-3'); ?> Use my current location
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" step="0.000001" name="latitude" id="input-lat" placeholder="Latitude (e.g. 10.315699)" value="<?= htmlspecialchars($cafe['latitude'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-xs focus:border-coffee focus:outline-none">
+                    <input type="number" step="0.000001" name="longitude" id="input-lng" placeholder="Longitude (e.g. 123.885437)" value="<?= htmlspecialchars($cafe['longitude'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-xs focus:border-coffee focus:outline-none">
+                </div>
+                <p class="mt-1 text-[10px] text-stone-400">Click &ldquo;Use my current location&rdquo; at your café, or paste latitude and longitude from Google Maps.</p>
+            </div>
             <?php render_image_upload_field($upload_auth, 'logo_url', 'Logo', $cafe['logo_url'] ?? ''); ?>
             <?php render_image_upload_field($upload_auth, 'cover_url', 'Cover photo', $cafe['cover_url'] ?? ''); ?>
         </div>
@@ -77,4 +92,17 @@ require_once __DIR__ . '/../includes/header.php';
     <?php endif; ?>
 </div>
 <script src="/includes/image_upload.js"></script>
+<script src="/includes/location.js"></script>
+<script>
+document.getElementById('btn-use-location')?.addEventListener('click', function () {
+    const btn = this;
+    const originalText = btn.innerHTML;
+    btn.textContent = 'Detecting...';
+    window.higoffeGetLocation(function (lat, lng) {
+        document.getElementById('input-lat').value = lat;
+        document.getElementById('input-lng').value = lng;
+        btn.innerHTML = originalText;
+    });
+});
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

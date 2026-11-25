@@ -26,7 +26,7 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <!-- Status tabs -->
-<div class="no-scrollbar flex gap-2 overflow-x-auto px-4 pt-3">
+<div class="no-scrollbar flex gap-2 overflow-x-auto px-4 pt-3 lg:px-6">
     <?php foreach ($statuses as $status): ?>
         <?php $active = $status === $active_status; ?>
         <a href="/orders/seller_dashboard.php?status=<?= urlencode($status) ?>"
@@ -36,11 +36,11 @@ require_once __DIR__ . '/../includes/header.php';
     <?php endforeach; ?>
 </div>
 
-<section class="mt-4 px-4">
+<section class="mt-4 px-4 lg:px-6">
     <?php if (empty($orders)): ?>
-        <?php render_empty_state('🧾', 'No "' . $active_status . '" orders'); ?>
+        <?php render_empty_state('receipt', 'No "' . $active_status . '" orders'); ?>
     <?php else: ?>
-        <div class="space-y-2">
+        <div class="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             <?php foreach ($orders as $order): ?>
                 <a href="/orders/view.php?id=<?= (int) $order['order_id'] ?>" class="flex items-center gap-3 rounded-2xl bg-white p-3.5 active:bg-stone-50">
                     <?php render_avatar(null, $order['customer_name'], 'w-10 h-10'); ?>

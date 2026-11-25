@@ -42,7 +42,7 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <!-- Profile header -->
-<div class="bg-white px-4 pb-4 pt-5">
+<div class="bg-white px-4 pb-4 pt-5 lg:mx-auto lg:mt-4 lg:max-w-xl lg:rounded-2xl lg:border lg:border-stone-100">
     <div class="flex items-center gap-4">
         <?php render_avatar($profile_user['avatar_url'] ?? null, $profile_user['full_name'], 'w-16 h-16'); ?>
         <div class="min-w-0 flex-1">
@@ -74,20 +74,23 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <!-- Posts -->
-<section class="mt-3">
+<section class="mt-3 lg:mx-auto lg:max-w-xl">
     <?php if (empty($posts)): ?>
-        <?php render_empty_state('📷', 'No posts yet', $is_own ? 'Share your first café moment from the Post tab.' : ''); ?>
+        <?php render_empty_state('photo', 'No posts yet', $is_own ? 'Share your first café moment from the Post tab.' : ''); ?>
     <?php else: ?>
         <div class="space-y-2.5">
             <?php foreach ($posts as $post): ?>
-                <article class="bg-white px-4 py-3">
+                <article class="bg-white px-4 py-3 lg:rounded-2xl lg:border lg:border-stone-100">
                     <?php if (!empty($post['caption'])): ?>
                         <p class="whitespace-pre-wrap text-sm text-stone-800"><?= htmlspecialchars($post['caption'], ENT_QUOTES, 'UTF-8') ?></p>
                     <?php endif; ?>
                     <?php if (!empty($post['image_url'])): ?>
                         <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="mt-2 max-h-80 w-full rounded-xl object-cover">
                     <?php endif; ?>
-                    <p class="mt-2 text-[11px] text-stone-400">&hearts; <?= (int) $post['like_count'] ?> &middot; &#128172; <?= (int) $post['comment_count'] ?></p>
+                    <p class="mt-2 flex items-center gap-3 text-[11px] text-stone-400">
+                        <span class="flex items-center gap-1"><?php icon('heart', 'w-3.5 h-3.5'); ?><?= (int) $post['like_count'] ?></span>
+                        <span class="flex items-center gap-1"><?php icon('chat-bubble', 'w-3.5 h-3.5'); ?><?= (int) $post['comment_count'] ?></span>
+                    </p>
                 </article>
             <?php endforeach; ?>
         </div>

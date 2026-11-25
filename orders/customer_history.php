@@ -14,9 +14,9 @@ $back_url = '/feed/index.php';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<section class="px-4 py-4">
+<section class="px-4 py-4 lg:mx-auto lg:max-w-2xl">
     <?php if (empty($orders)): ?>
-        <?php render_empty_state('🧾', 'No orders yet', 'Chat with a café and they can turn your conversation into an order.'); ?>
+        <?php render_empty_state('receipt', 'No orders yet', 'Chat with a café and they can turn your conversation into an order.'); ?>
     <?php else: ?>
         <div class="space-y-2">
             <?php foreach ($orders as $order): ?>

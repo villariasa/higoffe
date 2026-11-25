@@ -57,7 +57,7 @@ $back_url = $role === 'customer' ? '/orders/customer_history.php' : '/orders/sel
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="space-y-3 px-4 py-4">
+<div class="space-y-3 px-4 py-4 lg:mx-auto lg:max-w-xl lg:px-0">
 
     <!-- Status timeline -->
     <div class="rounded-2xl bg-white p-4">
@@ -73,7 +73,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <div class="h-0.5 flex-1 <?= $done ? 'bg-accent' : 'bg-stone-200' ?>"></div>
                             <?php endif; ?>
                             <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold <?= $done ? 'bg-accent text-white' : 'bg-stone-200 text-stone-400' ?>">
-                                <?= $done ? '✓' : $i + 1 ?>
+                                <?php if ($done): ?><?php icon('check', 'w-3 h-3'); ?><?php else: ?><?= $i + 1 ?><?php endif; ?>
                             </span>
                         </div>
                     </div>
@@ -126,7 +126,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <p class="text-sm text-stone-500">Proof submitted — waiting for the café to confirm.</p>
             <?php endif; ?>
         <?php else: ?>
-            <p class="text-sm font-bold text-green-600">&check; Payment confirmed</p>
+            <p class="flex items-center gap-1.5 text-sm font-bold text-green-600"><?php icon('check-circle', 'w-4 h-4'); ?> Payment confirmed</p>
         <?php endif; ?>
     </div>
 

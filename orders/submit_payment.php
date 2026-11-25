@@ -47,7 +47,7 @@ $back_url = '/orders/view.php?id=' . $order_id;
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="space-y-3 px-4 py-4">
+<div class="space-y-3 px-4 py-4 lg:mx-auto lg:max-w-xl lg:px-0">
     <div class="rounded-2xl bg-white p-4">
         <p class="text-sm text-stone-600">Upload a screenshot of your GCash/bank transfer for
             <span class="font-bold">order #<?= (int) $order_id ?></span>

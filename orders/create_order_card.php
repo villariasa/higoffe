@@ -130,7 +130,7 @@ $back_url = '/chat/conversation.php?id=' . $conversation_id;
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="space-y-3 px-4 py-4">
+<div class="space-y-3 px-4 py-4 lg:mx-auto lg:max-w-xl lg:px-0">
     <?php if ($error !== ''): ?>
         <p class="rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>

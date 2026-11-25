@@ -81,11 +81,11 @@ $no_shell = true; // custom chat top bar below
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="flex flex-col" style="height: calc(100dvh - 5rem);">
+<div class="mx-auto flex w-full flex-col lg:max-w-2xl lg:py-4" style="height: calc(100dvh - 5rem);">
     <!-- Chat top bar -->
-    <header class="sticky top-0 z-40 flex items-center gap-2 border-b border-stone-200 bg-cream/95 px-2 py-2 backdrop-blur">
+    <header class="sticky top-0 z-40 flex items-center gap-2 border-b border-stone-200 bg-cream/95 px-2 py-2 backdrop-blur lg:rounded-t-2xl lg:border lg:bg-white">
         <a href="<?= $back ?>" aria-label="Back" class="flex h-9 w-9 items-center justify-center rounded-full active:bg-stone-200">
-            <svg class="h-5 w-5 text-stone-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+            <?php icon('arrow-left', 'w-5 h-5 text-stone-700'); ?>
         </a>
         <?php render_avatar($other_avatar, $other_name, 'w-8 h-8'); ?>
         <div class="min-w-0 flex-1">
@@ -123,14 +123,14 @@ require_once __DIR__ . '/../includes/header.php';
     <?php endif; ?>
 
     <!-- Composer -->
-    <form id="send-form" class="flex items-center gap-2 border-t border-stone-200 bg-white px-3 py-2.5">
-        <label class="shrink-0 cursor-pointer text-xl text-stone-400 active:text-accent" title="Send a photo">
-            &#128247;
+    <form id="send-form" class="flex items-center gap-2 border-t border-stone-200 bg-white px-3 py-2.5 lg:rounded-b-2xl lg:border lg:border-t-stone-200">
+        <label class="shrink-0 cursor-pointer text-stone-400 hover:text-accent" title="Send a photo">
+            <?php icon('camera', 'w-6 h-6'); ?>
             <input type="file" id="chat-image-input" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
         </label>
         <input type="text" id="body-input" placeholder="Type a message..." class="h-10 flex-1 rounded-full border border-stone-200 bg-cream px-4 text-sm focus:border-coffee focus:outline-none">
-        <button type="submit" aria-label="Send" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white active:opacity-80">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 12 15-7-7 15-2-6-6-2Z"/></svg>
+        <button type="submit" aria-label="Send" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white active:opacity-80 hover:opacity-90">
+            <?php icon('paper-airplane', 'w-4 h-4'); ?>
         </button>
     </form>
     <p id="chat-status" class="bg-white px-4 pb-1 text-[11px] text-stone-400"></p>
@@ -169,7 +169,7 @@ require_once __DIR__ . '/../includes/header.php';
             const a = document.createElement('a');
             a.className = 'underline text-xs font-semibold';
             a.href = '/orders/view.php?id=' + m.order_id;
-            a.textContent = '☕ New order card — view / respond';
+            a.textContent = 'New order card — view / respond';
             bubble.appendChild(a);
         } else if (m.message_type === 'image' && m.image_url) {
             const img = document.createElement('img');

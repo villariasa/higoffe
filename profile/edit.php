@@ -31,7 +31,7 @@ $back_url = '/profile/view.php';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="px-4 py-4">
+<div class="px-4 py-4 lg:mx-auto lg:max-w-xl lg:px-0">
     <?php if ($saved): ?>
         <p class="mb-3 rounded-xl bg-green-50 p-3 text-sm text-green-700">Saved.</p>
     <?php endif; ?>

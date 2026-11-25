@@ -21,8 +21,9 @@ function render_image_upload_field(array $auth, string $name, string $label, str
                 class="preview-img w-20 h-20 object-cover rounded-xl border border-stone-200 bg-stone-50 <?= $current_url === '' ? 'hidden' : '' ?>"
             >
             <div>
-                <label class="file-trigger inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 cursor-pointer active:border-accent active:text-accent">
-                    &#128247; Choose photo
+                <?php require_once __DIR__ . '/icons.php'; ?>
+                <label class="file-trigger inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 cursor-pointer hover:border-accent hover:text-accent">
+                    <?php icon('camera', 'w-4 h-4'); ?> Choose photo
                     <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="file-input hidden">
                 </label>
                 <p class="status-text text-xs text-stone-400 mt-1"></p>

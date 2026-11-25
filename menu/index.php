@@ -23,11 +23,11 @@ $back_url = '/queue/index.php';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="px-4 py-4">
+<div class="px-4 py-4 lg:mx-auto lg:max-w-2xl lg:px-0">
     <a href="/menu/create.php" class="mb-3 block w-full rounded-xl bg-accent py-3 text-center text-sm font-bold text-white active:opacity-80">+ Add product</a>
 
     <?php if (empty($products)): ?>
-        <?php render_empty_state('🥤', 'No products yet', 'Add your first drink or pastry so customers can see your menu.'); ?>
+        <?php render_empty_state('beaker', 'No products yet', 'Add your first drink or pastry so customers can see your menu.'); ?>
     <?php else: ?>
         <div class="space-y-2">
             <?php foreach ($products as $product): ?>
@@ -36,7 +36,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php if (!empty($product['image_url'])): ?>
                             <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
                         <?php else: ?>
-                            <div class="flex h-full w-full items-center justify-center text-lg">&#129380;</div>
+                            <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('beaker', 'w-6 h-6'); ?></div>
                         <?php endif; ?>
                     </div>
                     <div class="min-w-0 flex-1">

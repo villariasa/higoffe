@@ -44,35 +44,35 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <!-- Cover hero -->
-<div class="relative h-44 w-full bg-stone-300">
+<div class="relative h-44 w-full bg-stone-300 lg:h-64">
     <?php if (!empty($cafe['cover_url'])): ?>
         <img src="<?= htmlspecialchars($cafe['cover_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
     <?php else: ?>
-        <div class="flex h-full w-full items-center justify-center bg-coffee/20 text-4xl">&#9749;</div>
+        <div class="flex h-full w-full items-center justify-center bg-coffee/20 text-coffee"><?php icon('storefront', 'w-12 h-12'); ?></div>
     <?php endif; ?>
-    <a href="/cafes/discover.php" aria-label="Back" class="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow">
-        <svg class="h-5 w-5 text-stone-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+    <a href="/cafes/discover.php" aria-label="Back" class="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow lg:hidden">
+        <?php icon('arrow-left', 'w-5 h-5 text-stone-700'); ?>
     </a>
 </div>
 
 <!-- Identity card -->
-<div class="relative mx-4 -mt-8 rounded-2xl bg-white p-4 shadow-sm">
+<div class="relative mx-4 -mt-8 rounded-2xl bg-white p-4 shadow-sm lg:mx-6 lg:-mt-12 lg:max-w-3xl lg:p-6">
     <div class="flex items-start gap-3">
-        <div class="-mt-10 h-16 w-16 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-stone-200 shadow">
+        <div class="-mt-10 h-16 w-16 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-stone-200 shadow lg:h-20 lg:w-20">
             <?php if (!empty($cafe['logo_url'])): ?>
                 <img src="<?= htmlspecialchars($cafe['logo_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
             <?php else: ?>
-                <div class="flex h-full w-full items-center justify-center text-xl">&#9749;</div>
+                <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('storefront', 'w-7 h-7'); ?></div>
             <?php endif; ?>
         </div>
         <div class="min-w-0 flex-1">
-            <h1 class="text-base font-black text-stone-900">
+            <h1 class="flex items-center gap-1.5 text-base font-black text-stone-900 lg:text-lg">
                 <?= htmlspecialchars($cafe['cafe_name'], ENT_QUOTES, 'UTF-8') ?>
-                <?php if ($cafe['is_verified']): ?><span class="text-xs font-bold text-accent">&check; Verified</span><?php endif; ?>
+                <?php if ($cafe['is_verified']): ?><?php icon('check-badge-solid', 'w-4 h-4 text-accent'); ?><?php endif; ?>
             </h1>
             <?php if (!empty($cafe['address'])): ?>
                 <p class="mt-0.5 flex items-center gap-1 text-[11px] text-stone-500">
-                    <svg class="h-3 w-3 text-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg>
+                    <?php icon('map-pin-solid', 'w-3 h-3 text-accent'); ?>
                     <?= htmlspecialchars($cafe['address'], ENT_QUOTES, 'UTF-8') ?>
                 </p>
             <?php endif; ?>
@@ -108,19 +108,19 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <!-- Menu -->
-<section class="mt-5">
+<section class="mt-5 lg:mt-8">
     <?php render_section_header('Menu'); ?>
     <?php if (empty($products)): ?>
-        <?php render_empty_state('🥤', 'No menu items yet'); ?>
+        <?php render_empty_state('beaker', 'No menu items yet'); ?>
     <?php else: ?>
-        <div class="space-y-2 px-4">
+        <div class="space-y-2 px-4 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 lg:px-6">
             <?php foreach ($products as $product): ?>
-                <div class="flex gap-3 rounded-2xl bg-white p-3">
+                <div class="flex gap-3 rounded-2xl bg-white p-3 lg:border lg:border-stone-100">
                     <div class="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-stone-200">
                         <?php if (!empty($product['image_url'])): ?>
                             <img src="<?= htmlspecialchars($product['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
                         <?php else: ?>
-                            <div class="flex h-full w-full items-center justify-center text-xl">&#129380;</div>
+                            <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('beaker', 'w-7 h-7'); ?></div>
                         <?php endif; ?>
                     </div>
                     <div class="min-w-0 flex-1">
@@ -143,21 +143,24 @@ require_once __DIR__ . '/../includes/header.php';
 </section>
 
 <!-- Posts -->
-<section class="mt-5">
+<section class="mt-5 lg:mt-8 lg:max-w-3xl">
     <?php render_section_header('Posts'); ?>
     <?php if (empty($posts)): ?>
-        <?php render_empty_state('📷', 'No posts yet'); ?>
+        <?php render_empty_state('photo', 'No posts yet'); ?>
     <?php else: ?>
-        <div class="space-y-2.5">
+        <div class="space-y-2.5 lg:px-6">
             <?php foreach ($posts as $post): ?>
-                <article class="bg-white px-4 py-3">
+                <article class="bg-white px-4 py-3 lg:rounded-2xl lg:border lg:border-stone-100">
                     <?php if (!empty($post['caption'])): ?>
                         <p class="whitespace-pre-wrap text-sm text-stone-800"><?= htmlspecialchars($post['caption'], ENT_QUOTES, 'UTF-8') ?></p>
                     <?php endif; ?>
                     <?php if (!empty($post['image_url'])): ?>
                         <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="mt-2 max-h-72 w-full rounded-xl object-cover">
                     <?php endif; ?>
-                    <p class="mt-2 text-[11px] text-stone-400">&hearts; <?= (int) $post['like_count'] ?> &middot; &#128172; <?= (int) $post['comment_count'] ?></p>
+                    <p class="mt-2 flex items-center gap-3 text-[11px] text-stone-400">
+                        <span class="flex items-center gap-1"><?php icon('heart', 'w-3.5 h-3.5'); ?><?= (int) $post['like_count'] ?></span>
+                        <span class="flex items-center gap-1"><?php icon('chat-bubble', 'w-3.5 h-3.5'); ?><?= (int) $post['comment_count'] ?></span>
+                    </p>
                 </article>
             <?php endforeach; ?>
         </div>
