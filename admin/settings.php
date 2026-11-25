@@ -100,5 +100,6 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
         <button type="submit" class="w-full rounded-xl bg-accent py-2.5 text-sm font-bold text-white hover:opacity-90">Save</button>
     </form>
+    <a href="/admin/test_email.php" class="mt-3 block w-full rounded-xl border border-coffee/30 py-2.5 text-center text-sm font-bold text-coffee hover:bg-cream">Test email sending →</a>
 </div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
