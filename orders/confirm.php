@@ -66,7 +66,7 @@ require_once __DIR__ . '/../includes/header.php';
             <input type="hidden" name="action" value="confirm">
             <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Confirm order</button>
         </form>
-        <form method="post" onsubmit="return confirm('Cancel this order?');">
+        <form method="post" data-confirm="Cancel this order?">
             <input type="hidden" name="action" value="cancel">
             <button type="submit" class="w-full rounded-xl border border-red-300 py-3 text-sm font-bold text-red-500 active:bg-red-50">Cancel</button>
         </form>

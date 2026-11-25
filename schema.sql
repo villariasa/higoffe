@@ -59,11 +59,20 @@ CREATE TABLE product_addons (
 
 -- Posts are the primary social surface: EITHER a seller posting as their
 -- café (cafe_id set) OR any user posting a personal café experience
--- (cafe_id NULL). author_user_id is always the real poster, for either case.
+-- (cafe_id NULL). author_user_id is always the real poster, for either
+-- case. product_id optionally tags a specific drink/menu item the post
+-- is about — the feed renders it as a product chip linking to the item.
+-- tagged_cafe_id = a check-in ("Jane is at Higoffe Coffee") — distinct
+-- from cafe_id, which means the post was authored AS that café.
+-- visibility: 'public' = global feed; 'cafe_only' = shown only on the
+-- relevant café's page (and to the author themselves).
 CREATE TABLE posts (
     post_id        SERIAL PRIMARY KEY,
     author_user_id INTEGER NOT NULL REFERENCES users(user_id),
     cafe_id        INTEGER NULL REFERENCES cafes(cafe_id),
+    tagged_cafe_id INTEGER NULL REFERENCES cafes(cafe_id),
+    product_id     INTEGER NULL REFERENCES products(product_id),
+    visibility     VARCHAR(10) NOT NULL DEFAULT 'public' CHECK (visibility IN ('public','cafe_only')),
     caption        TEXT,
     image_url      VARCHAR(255),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -175,6 +184,51 @@ CREATE TABLE settings (
     setting_key   VARCHAR(100) PRIMARY KEY,
     setting_value TEXT,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Product (menu item) reviews: one per customer per product, only from
+-- customers whose Completed order actually contained that product
+-- (verified-buyer gate, enforced in PHP).
+CREATE TABLE product_reviews (
+    review_id        SERIAL PRIMARY KEY,
+    product_id       INTEGER NOT NULL REFERENCES products(product_id),
+    customer_user_id INTEGER NOT NULL REFERENCES users(user_id),
+    rating           INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    review_text      TEXT,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (product_id, customer_user_id)
+);
+
+-- Product likes (lightweight favorites on menu items).
+CREATE TABLE product_likes (
+    like_id    SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(product_id),
+    user_id    INTEGER NOT NULL REFERENCES users(user_id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (product_id, user_id)
+);
+
+-- Café reviews: one per customer per café, only from customers with at
+-- least one Completed order there ("verified buyer" reviews — enforced in
+-- PHP). Re-reviewing updates the existing row.
+CREATE TABLE cafe_reviews (
+    review_id        SERIAL PRIMARY KEY,
+    cafe_id          INTEGER NOT NULL REFERENCES cafes(cafe_id),
+    customer_user_id INTEGER NOT NULL REFERENCES users(user_id),
+    rating           INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    review_text      TEXT,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (cafe_id, customer_user_id)
+);
+
+-- In-app notifications (e.g. "an admin removed your post"). Minimal by
+-- design: plain text body, read flag, newest-first list.
+CREATE TABLE notifications (
+    notification_id SERIAL PRIMARY KEY,
+    user_id         INTEGER NOT NULL REFERENCES users(user_id),
+    body            TEXT NOT NULL,
+    is_read         BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Content-moderation reports (customers flag a post/café; admin reviews).

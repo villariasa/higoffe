@@ -81,7 +81,13 @@ $no_shell = true; // custom chat top bar below
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="mx-auto flex w-full flex-col lg:max-w-2xl lg:py-4" style="height: calc(100dvh - 5rem);">
+<div class="lg:grid lg:h-[calc(100vh-6rem)] lg:grid-cols-[360px_minmax(0,1fr)] lg:px-8 lg:pt-4">
+    <!-- Desktop conversation list pane -->
+    <div class="hidden lg:block lg:overflow-y-auto lg:rounded-l-2xl lg:border lg:border-stone-200 lg:bg-white">
+        <?php $active_conversation_id = $conversation_id; include __DIR__ . '/_conversation_list.php'; ?>
+    </div>
+
+<div class="flex h-[calc(100dvh-5rem)] w-full flex-col lg:h-full lg:rounded-r-2xl lg:border lg:border-l-0 lg:border-stone-200 lg:bg-white">
     <!-- Chat top bar -->
     <header class="sticky top-0 z-40 flex items-center gap-2 border-b border-stone-200 bg-cream/95 px-2 py-2 backdrop-blur lg:rounded-t-2xl lg:border lg:bg-white">
         <a href="<?= $back ?>" aria-label="Back" class="flex h-9 w-9 items-center justify-center rounded-full active:bg-stone-200">
@@ -94,7 +100,7 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
         <?php if ($role === 'seller' && $conversation['status'] === 'active'): ?>
             <a href="/orders/create_order_card.php?conversation_id=<?= $conversation_id ?>" class="shrink-0 rounded-full bg-accent px-3 py-1.5 text-[11px] font-bold text-white">+ Order</a>
-            <form method="post" onsubmit="return confirm('Mark this inquiry resolved?');" class="shrink-0">
+            <form method="post" data-confirm="Mark this inquiry resolved?" class="shrink-0">
                 <input type="hidden" name="action" value="resolve">
                 <button type="submit" class="px-2 text-[11px] font-semibold text-stone-400">Resolve</button>
             </form>
@@ -135,6 +141,7 @@ require_once __DIR__ . '/../includes/header.php';
     </form>
     <p id="chat-status" class="bg-white px-4 pb-1 text-[11px] text-stone-400"></p>
 </div>
+</div><!-- /two-pane grid -->
 
 <script>
 (function () {
@@ -184,6 +191,9 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     async function poll() {
+        // Under Turbo there is no page unload, so navigating away would
+        // leak this interval forever — self-clear once our DOM is gone.
+        if (!document.body.contains(list)) { clearInterval(pollTimer); return; }
         if (document.hidden) return;
         const res = await fetch('/chat/poll_messages.php?conversation_id=' + conversationId + '&after_id=' + afterId);
         const rows = await res.json();
@@ -249,7 +259,7 @@ require_once __DIR__ . '/../includes/header.php';
     });
 
     list.scrollTop = list.scrollHeight;
-    setInterval(poll, 3000);
+    const pollTimer = setInterval(poll, 3000);
 })();
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

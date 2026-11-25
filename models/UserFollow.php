@@ -39,6 +39,29 @@ class UserFollow {
         return (int) $stmt->fetchColumn();
     }
 
+    // "Suggested to follow" (desktop right rail): most-followed users the
+    // viewer doesn't follow yet (and isn't).
+    public function getSuggestions(int $viewer_user_id, int $limit = 5): array {
+        $sql = "SELECT u.user_id, u.full_name, u.avatar_url,
+                       (SELECT COUNT(*) FROM user_follows f2 WHERE f2.followed_user_id = u.user_id) AS follower_count
+                FROM users u
+                WHERE u.user_id != :viewer
+                  AND u.role != 'admin'
+                  AND u.is_suspended = FALSE
+                  AND NOT EXISTS (
+                      SELECT 1 FROM user_follows f
+                      WHERE f.follower_user_id = :viewer2 AND f.followed_user_id = u.user_id
+                  )
+                ORDER BY follower_count DESC, u.user_id ASC
+                LIMIT :limit";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(":viewer", $viewer_user_id, PDO::PARAM_INT);
+        $stmt->bindValue(":viewer2", $viewer_user_id, PDO::PARAM_INT);
+        $stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
     public function countFollowing(int $user_id): int {
         $sql = "SELECT COUNT(*) FROM user_follows WHERE follower_user_id = :user_id";
         $stmt = $this->pdo->prepare($sql);

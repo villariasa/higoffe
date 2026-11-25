@@ -114,6 +114,20 @@ class Order {
         return $stmt->rowCount() === 1;
     }
 
+    // Seller-facing mini summary (queue dashboard): completed orders +
+    // revenue for ONE café over the last N days.
+    public function getCafeSalesSummary(int $cafe_id, int $days = 7): array {
+        $sql = "SELECT COUNT(*) AS order_count, COALESCE(SUM(total_amount), 0) AS total_revenue
+                FROM orders o
+                JOIN order_statuses os ON o.status_id = os.status_id
+                WHERE o.cafe_id = :cafe_id
+                  AND os.status_label = 'Completed'
+                  AND o.created_at >= NOW() - (:days || ' days')::interval";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["cafe_id" => $cafe_id, "days" => $days]);
+        return $stmt->fetch() ?: ["order_count" => 0, "total_revenue" => 0];
+    }
+
     // --- Admin sales report (plain SQL aggregates, no new tables) ---
 
     public function getSalesSummary(string $start_date, string $end_date): array {

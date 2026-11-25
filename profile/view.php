@@ -90,6 +90,15 @@ require_once __DIR__ . '/../includes/header.php';
                     <p class="mt-2 flex items-center gap-3 text-[11px] text-stone-400">
                         <span class="flex items-center gap-1"><?php icon('heart', 'w-3.5 h-3.5'); ?><?= (int) $post['like_count'] ?></span>
                         <span class="flex items-center gap-1"><?php icon('chat-bubble', 'w-3.5 h-3.5'); ?><?= (int) $post['comment_count'] ?></span>
+                        <?php if ($is_own): ?>
+                            <form method="post" action="/feed/delete_post.php" data-confirm="Delete this post?" class="ml-auto">
+                                <input type="hidden" name="post_id" value="<?= (int) $post['post_id'] ?>">
+                                <input type="hidden" name="return_to" value="/profile/view.php">
+                                <button type="submit" aria-label="Delete post" class="flex items-center gap-1 text-stone-300 hover:text-red-500">
+                                    <?php icon('trash', 'w-3.5 h-3.5'); ?> Delete
+                                </button>
+                            </form>
+                        <?php endif; ?>
                     </p>
                 </article>
             <?php endforeach; ?>

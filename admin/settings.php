@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/Settings.php';
 require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../includes/components.php';
 require_role('admin');
 
 $pdo = (new Database())->connect();
@@ -26,8 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $settingsModel->set('smtp_port', $smtp_port);
         $settingsModel->set('smtp_username', $smtp_username);
         // Only overwrite the stored password if a new one was actually
-        // typed — the field is always rendered blank below, so an empty
-        // submit means "leave it as-is", not "clear it".
+        // typed — the field renders blank, so empty means "keep as-is".
         if ($smtp_password !== '') {
             $settingsModel->set('smtp_password', $smtp_password);
         }
@@ -39,61 +39,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $current = $settingsModel->getAll();
+$field = 'w-full rounded-xl border border-stone-200 bg-white p-2.5 text-sm focus:border-coffee focus:outline-none';
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-lg mx-auto bg-white border border-stone-200 rounded-lg p-6">
-    <h1 class="text-xl font-bold mb-4">SMTP settings</h1>
-    <p class="text-sm text-stone-500 mb-4">
-        Controls where account-verification emails are sent from. Saved here, these take
-        priority over the SMTP_* environment variables / config/smtp_credentials.php fallback.
-    </p>
+<h1 class="text-xl font-black text-stone-900">SMTP settings</h1>
+<p class="mt-0.5 max-w-xl text-sm text-stone-500">
+    Controls where account-verification emails are sent from. Values saved here take priority
+    over the SMTP_* environment variables / <code>config/smtp_credentials.php</code> fallback.
+</p>
 
+<div class="mt-5 max-w-xl rounded-2xl border border-stone-200 bg-white p-5">
     <?php if ($saved): ?>
-        <p class="bg-green-50 text-green-700 text-sm rounded p-3 mb-4">Saved.</p>
+        <p class="mb-4 flex items-center gap-2 rounded-xl bg-green-50 p-3 text-sm text-green-700"><?php icon('check-circle', 'w-4 h-4'); ?> Saved.</p>
     <?php endif; ?>
     <?php if ($error !== ''): ?>
-        <p class="bg-red-50 text-red-700 text-sm rounded p-3 mb-4"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+        <p class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>
 
-    <form method="post" class="space-y-3">
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">SMTP host</label>
-            <input type="text" name="smtp_host" required value="<?= htmlspecialchars($current['smtp_host'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="smtp.gmail.com" class="w-full border border-stone-300 rounded p-2">
+    <form method="post" class="space-y-3.5">
+        <div class="grid gap-3.5 sm:grid-cols-2">
+            <div>
+                <label class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-stone-400">SMTP host</label>
+                <input type="text" name="smtp_host" required value="<?= htmlspecialchars($current['smtp_host'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="smtp.gmail.com" class="<?= $field ?>">
+            </div>
+            <div>
+                <label class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-stone-400">Port</label>
+                <input type="number" name="smtp_port" required value="<?= htmlspecialchars($current['smtp_port'] ?? '587', ENT_QUOTES, 'UTF-8') ?>" class="<?= $field ?>">
+            </div>
         </div>
         <div>
-            <label class="block text-sm text-stone-600 mb-1">Port</label>
-            <input type="number" name="smtp_port" required value="<?= htmlspecialchars($current['smtp_port'] ?? '587', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
-        </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Encryption</label>
-            <select name="smtp_encryption" class="w-full border border-stone-300 rounded p-2">
+            <label class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-stone-400">Encryption</label>
+            <select name="smtp_encryption" class="<?= $field ?>">
                 <option value="tls" <?= ($current['smtp_encryption'] ?? 'tls') === 'tls' ? 'selected' : '' ?>>TLS (port 587)</option>
                 <option value="ssl" <?= ($current['smtp_encryption'] ?? '') === 'ssl' ? 'selected' : '' ?>>SSL (port 465)</option>
             </select>
         </div>
         <div>
-            <label class="block text-sm text-stone-600 mb-1">Username</label>
-            <input type="text" name="smtp_username" required value="<?= htmlspecialchars($current['smtp_username'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
+            <label class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-stone-400">Username</label>
+            <input type="text" name="smtp_username" required value="<?= htmlspecialchars($current['smtp_username'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="<?= $field ?>">
         </div>
         <div>
-            <label class="block text-sm text-stone-600 mb-1">
+            <label class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-stone-400">
                 Password
                 <?php if (!empty($current['smtp_password'])): ?>
-                    <span class="text-xs text-stone-400">(already set — leave blank to keep it)</span>
+                    <span class="font-normal normal-case text-stone-400">(already set — leave blank to keep it)</span>
                 <?php endif; ?>
             </label>
-            <input type="password" name="smtp_password" placeholder="<?= !empty($current['smtp_password']) ? '••••••••' : '' ?>" class="w-full border border-stone-300 rounded p-2">
+            <input type="password" name="smtp_password" placeholder="<?= !empty($current['smtp_password']) ? '••••••••' : '' ?>" class="<?= $field ?>">
         </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">From email</label>
-            <input type="email" name="smtp_from_email" required value="<?= htmlspecialchars($current['smtp_from_email'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
+        <div class="grid gap-3.5 sm:grid-cols-2">
+            <div>
+                <label class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-stone-400">From email</label>
+                <input type="email" name="smtp_from_email" required value="<?= htmlspecialchars($current['smtp_from_email'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="<?= $field ?>">
+            </div>
+            <div>
+                <label class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-stone-400">From name</label>
+                <input type="text" name="smtp_from_name" value="<?= htmlspecialchars($current['smtp_from_name'] ?? 'Higoffe', ENT_QUOTES, 'UTF-8') ?>" class="<?= $field ?>">
+            </div>
         </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">From name</label>
-            <input type="text" name="smtp_from_name" value="<?= htmlspecialchars($current['smtp_from_name'] ?? 'Higoffe', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
-        </div>
-        <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Save</button>
+        <button type="submit" class="w-full rounded-xl bg-accent py-2.5 text-sm font-bold text-white hover:opacity-90">Save</button>
     </form>
 </div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

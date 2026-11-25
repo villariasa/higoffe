@@ -2,12 +2,18 @@
 class Cafe {
     private PDO $pdo;
 
+    // Review aggregates, appended to every café SELECT so any card or
+    // page can show "★ 4.5 (12)" without extra queries. Expects the
+    // cafes table to be aliased as `c`.
+    private const RATING_COLS = ", (SELECT ROUND(AVG(r.rating)::numeric, 1) FROM cafe_reviews r WHERE r.cafe_id = c.cafe_id) AS rating_avg
+                                 , (SELECT COUNT(*) FROM cafe_reviews r2 WHERE r2.cafe_id = c.cafe_id) AS rating_count";
+
     public function __construct(PDO $pdo) {
         $this->pdo = $pdo;
     }
 
     public function getById(int $cafe_id) {
-        $sql = "SELECT * FROM cafes WHERE cafe_id = :cafe_id";
+        $sql = "SELECT c.*" . self::RATING_COLS . " FROM cafes c WHERE c.cafe_id = :cafe_id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(["cafe_id" => $cafe_id]);
         return $stmt->fetch();
@@ -56,7 +62,7 @@ class Cafe {
     }
 
     public function getNearby(float $lat, float $lng, int $limit = 10): array {
-        $sql = "SELECT c.*, (6371 * acos(
+        $sql = "SELECT c.*" . self::RATING_COLS . ", (6371 * acos(
                     LEAST(1.0, GREATEST(-1.0,
                         cos(radians(:lat)) * cos(radians(c.latitude)) *
                         cos(radians(c.longitude) - radians(:lng)) +
@@ -77,7 +83,7 @@ class Cafe {
 
     public function search(string $keyword, ?float $lat = null, ?float $lng = null): array {
         if ($lat !== null && $lng !== null) {
-            $sql = "SELECT c.*, (6371 * acos(
+            $sql = "SELECT c.*" . self::RATING_COLS . ", (6371 * acos(
                         LEAST(1.0, GREATEST(-1.0,
                             cos(radians(:lat)) * cos(radians(c.latitude)) *
                             cos(radians(c.longitude) - radians(:lng)) +
@@ -92,7 +98,7 @@ class Cafe {
             return $stmt->fetchAll();
         }
 
-        $sql = "SELECT * FROM cafes WHERE cafe_name ILIKE :keyword ORDER BY cafe_name";
+        $sql = "SELECT c.*" . self::RATING_COLS . " FROM cafes c WHERE c.cafe_name ILIKE :keyword ORDER BY c.cafe_name";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(["keyword" => "%{$keyword}%"]);
         return $stmt->fetchAll();
@@ -100,7 +106,7 @@ class Cafe {
 
     public function getAll(?float $lat = null, ?float $lng = null): array {
         if ($lat !== null && $lng !== null) {
-            $sql = "SELECT c.*, (6371 * acos(
+            $sql = "SELECT c.*" . self::RATING_COLS . ", (6371 * acos(
                         LEAST(1.0, GREATEST(-1.0,
                             cos(radians(:lat)) * cos(radians(c.latitude)) *
                             cos(radians(c.longitude) - radians(:lng)) +
@@ -114,7 +120,7 @@ class Cafe {
             return $stmt->fetchAll();
         }
 
-        $sql = "SELECT * FROM cafes ORDER BY cafe_id";
+        $sql = "SELECT c.*" . self::RATING_COLS . " FROM cafes c ORDER BY c.cafe_id";
         $stmt = $this->pdo->query($sql);
         return $stmt->fetchAll();
     }

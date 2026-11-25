@@ -26,6 +26,7 @@ $order_summary = [];
 foreach (['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup'] as $status_label) {
     $order_summary[$status_label] = count($orderModel->getForSellerByStatus((int) $cafe['cafe_id'], $status_label));
 }
+$week_sales = $orderModel->getCafeSalesSummary((int) $cafe['cafe_id'], 7);
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -41,8 +42,20 @@ require_once __DIR__ . '/../includes/header.php';
     <a href="/cafes/profile.php" class="shrink-0 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-[11px] font-bold text-stone-600">Edit café</a>
 </div>
 
+<!-- This week -->
+<div class="mt-4 grid grid-cols-2 gap-2 px-4 lg:gap-3 lg:px-6">
+    <div class="rounded-2xl bg-white p-3.5 lg:border lg:border-stone-100">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-stone-400">Completed (7 days)</p>
+        <p class="mt-0.5 text-xl font-black text-stone-900"><?= (int) $week_sales['order_count'] ?></p>
+    </div>
+    <div class="rounded-2xl bg-white p-3.5 lg:border lg:border-stone-100">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-stone-400">Revenue (7 days)</p>
+        <p class="mt-0.5 text-xl font-black text-coffee">&#8369;<?= number_format((float) $week_sales['total_revenue'], 2) ?></p>
+    </div>
+</div>
+
 <!-- Order status summary -->
-<div class="mt-4 grid grid-cols-4 gap-2 px-4 lg:gap-3 lg:px-6">
+<div class="mt-3 grid grid-cols-4 gap-2 px-4 lg:gap-3 lg:px-6">
     <?php foreach ($order_summary as $label => $count): ?>
         <a href="/orders/seller_dashboard.php" class="rounded-xl bg-white p-2.5 text-center">
             <p class="text-lg font-black <?= $count > 0 ? 'text-accent' : 'text-stone-300' ?>"><?= $count ?></p>
@@ -121,8 +134,8 @@ document.querySelectorAll('.claim-btn').forEach(function (btn) {
         if (data.success) {
             window.location.href = '/chat/conversation.php?id=' + conversationId;
         } else {
-            alert('Already claimed by another team member.');
-            window.location.reload();
+            window.higoffeToast('Already claimed by another team member.', 'error');
+            setTimeout(function () { window.location.reload(); }, 1200);
         }
     });
 });

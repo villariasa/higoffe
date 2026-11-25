@@ -14,8 +14,12 @@ if (in_array($target_type, ['post', 'cafe'], true) && $target_id > 0) {
     $reportModel->create((int) $_SESSION['user_id'], $target_type, $target_id, $reason);
 }
 
-// Only allow redirecting back within the app — no open-redirect.
-if (!preg_match('#^/[a-zA-Z0-9/_.?=&-]*$#', $return_to)) {
+// Only allow redirecting back within the app — must start with a single
+// "/" (a second "/" or "\" would make it protocol-relative, i.e. an open
+// redirect to another host).
+if ($return_to === '' || $return_to[0] !== '/'
+    || (isset($return_to[1]) && ($return_to[1] === '/' || $return_to[1] === '\\'))
+    || !preg_match('#^/[a-zA-Z0-9/_.?=&-]*$#', $return_to)) {
     $return_to = '/index.php';
 }
 header("Location: {$return_to}");

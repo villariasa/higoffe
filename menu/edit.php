@@ -100,7 +100,7 @@ require_once __DIR__ . '/../includes/header.php';
             <label class="mb-1 block text-xs font-semibold text-stone-500">Base price (&#8369;)</label>
             <input type="number" step="0.01" min="0" name="base_price" required value="<?= htmlspecialchars((string) $product['base_price'], ENT_QUOTES, 'UTF-8') ?>" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
         </div>
-        <?php render_image_upload_field($upload_auth, 'image_url', 'Product photo', $product['image_url'] ?? ''); ?>
+        <?php render_image_upload_field($upload_auth, 'image_url', 'Product photo', $product['image_url'] ?? '', 3); ?>
         <label class="flex items-center gap-2 text-sm text-stone-700">
             <input type="checkbox" name="is_available" <?= $product['is_available'] ? 'checked' : '' ?> class="accent-accent">
             Available on menu

@@ -8,6 +8,14 @@ document.querySelectorAll('.image-upload-field').forEach(function (field) {
         const file = fileInput.files[0];
         if (!file) return;
 
+        // UX-only pre-check; the Worker enforces the real per-scope limit.
+        const maxMb = parseInt(field.dataset.maxMb, 10) || 5;
+        if (file.size > maxMb * 1024 * 1024) {
+            status.textContent = 'File too large — max ' + maxMb + 'MB for this photo.';
+            fileInput.value = '';
+            return;
+        }
+
         status.textContent = 'Uploading...';
 
         const form = new FormData();

@@ -79,8 +79,8 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <p class="mt-1 text-[10px] text-stone-400">Click &ldquo;Use my current location&rdquo; at your café, or paste latitude and longitude from Google Maps.</p>
             </div>
-            <?php render_image_upload_field($upload_auth, 'logo_url', 'Logo', $cafe['logo_url'] ?? ''); ?>
-            <?php render_image_upload_field($upload_auth, 'cover_url', 'Cover photo', $cafe['cover_url'] ?? ''); ?>
+            <?php render_image_upload_field($upload_auth, 'logo_url', 'Logo', $cafe['logo_url'] ?? '', 4); ?>
+            <?php render_image_upload_field($upload_auth, 'cover_url', 'Cover photo', $cafe['cover_url'] ?? '', 4); ?>
         </div>
         <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Save</button>
     </form>

@@ -13,18 +13,46 @@ class Product {
         return $stmt->fetchAll();
     }
 
-    public function getAvailableByCafe(int $cafe_id) {
-        $sql = "SELECT * FROM products WHERE cafe_id = :cafe_id AND is_available = TRUE ORDER BY product_id";
+    // Social aggregates appended wherever products are displayed.
+    // Expects the products table aliased as `p`.
+    private const SOCIAL_COLS = ", (SELECT ROUND(AVG(pr.rating)::numeric, 1) FROM product_reviews pr WHERE pr.product_id = p.product_id) AS rating_avg
+                                 , (SELECT COUNT(*) FROM product_reviews pr2 WHERE pr2.product_id = p.product_id) AS rating_count
+                                 , (SELECT COUNT(*) FROM product_likes plk WHERE plk.product_id = p.product_id) AS like_count";
+
+    public function getAvailableByCafe(int $cafe_id, ?int $viewer_user_id = null) {
+        $liked_col = $viewer_user_id !== null
+            ? ", EXISTS (SELECT 1 FROM product_likes plv WHERE plv.product_id = p.product_id AND plv.user_id = :viewer) AS liked_by_viewer"
+            : "";
+        $sql = "SELECT p.*" . self::SOCIAL_COLS . $liked_col . "
+                FROM products p
+                WHERE p.cafe_id = :cafe_id AND p.is_available = TRUE
+                ORDER BY p.product_id";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(["cafe_id" => $cafe_id]);
+        $params = ["cafe_id" => $cafe_id];
+        if ($viewer_user_id !== null) {
+            $params["viewer"] = $viewer_user_id;
+        }
+        $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    // Product detail page: one product with café info + social aggregates.
+    public function getByIdWithMeta(int $product_id, int $viewer_user_id) {
+        $sql = "SELECT p.*, c.cafe_name, c.logo_url AS cafe_logo_url" . self::SOCIAL_COLS . ",
+                       EXISTS (SELECT 1 FROM product_likes plv WHERE plv.product_id = p.product_id AND plv.user_id = :viewer) AS liked_by_viewer
+                FROM products p
+                JOIN cafes c ON p.cafe_id = c.cafe_id
+                WHERE p.product_id = :product_id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["product_id" => $product_id, "viewer" => $viewer_user_id]);
+        return $stmt->fetch();
     }
 
     // "Trending drinks" row on the Home screen — available products
     // ranked by how often they've actually been ordered, newest first as
     // the tiebreak so a fresh menu still fills the row.
     public function getTrending(int $limit = 10) {
-        $sql = "SELECT p.*, c.cafe_name,
+        $sql = "SELECT p.*, c.cafe_name" . self::SOCIAL_COLS . ",
                        (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.product_id = p.product_id) AS times_ordered
                 FROM products p
                 JOIN cafes c ON p.cafe_id = c.cafe_id

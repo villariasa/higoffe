@@ -3,6 +3,33 @@
 // (via includes/icons.php) — no emoji. Pure presentation.
 require_once __DIR__ . '/icons.php';
 
+// Relative post age: "Just now", "5 mins ago", "3 hrs ago", "2 days
+// ago", then the actual date past a week.
+function time_ago(string $timestamp): string {
+    $seconds = time() - strtotime($timestamp);
+    if ($seconds < 60) return 'Just now';
+    if ($seconds < 3600) { $m = intdiv($seconds, 60); return $m . ($m === 1 ? ' min ago' : ' mins ago'); }
+    if ($seconds < 86400) { $h = intdiv($seconds, 3600); return $h . ($h === 1 ? ' hr ago' : ' hrs ago'); }
+    if ($seconds < 604800) { $d = intdiv($seconds, 86400); return $d . ($d === 1 ? ' day ago' : ' days ago'); }
+    return date('M j, Y', strtotime($timestamp));
+}
+
+// ★★★★☆-style rating row. $avg may be null (no reviews yet).
+function render_stars(?float $avg, int $count = 0, string $size = 'w-3.5 h-3.5'): void {
+    if ($avg === null || $count === 0) {
+        echo '<span class="text-[11px] text-stone-400">No reviews yet</span>';
+        return;
+    }
+    echo '<span class="inline-flex items-center gap-0.5">';
+    $rounded = (int) round($avg);
+    for ($i = 1; $i <= 5; $i++) {
+        icon($i <= $rounded ? 'star-solid' : 'star', $size . ' ' . ($i <= $rounded ? 'text-amber-400' : 'text-stone-300'));
+    }
+    echo '<span class="ml-1 text-[11px] font-bold text-stone-700">' . number_format($avg, 1) . '</span>';
+    echo '<span class="text-[11px] text-stone-400">(' . $count . ')</span>';
+    echo '</span>';
+}
+
 function render_search_bar(string $action, string $placeholder, string $value = ''): void {
     $lat = isset($_GET['lat']) && is_numeric($_GET['lat']) ? (float) $_GET['lat'] : null;
     $lng = isset($_GET['lng']) && is_numeric($_GET['lng']) ? (float) $_GET['lng'] : null;
@@ -47,6 +74,13 @@ function render_cafe_card_h(array $cafe): void {
             <?php if (!empty($cafe['is_verified'])): ?><?php icon('check-badge-solid', 'w-3.5 h-3.5 shrink-0 text-accent'); ?><?php endif; ?>
         </p>
         <p class="truncate text-[11px] text-stone-500"><?= htmlspecialchars($cafe['address'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+        <?php if (!empty($cafe['rating_count'])): ?>
+            <p class="flex items-center gap-0.5 text-[11px] font-bold text-stone-700">
+                <?php icon('star-solid', 'w-3 h-3 text-amber-400'); ?>
+                <?= number_format((float) $cafe['rating_avg'], 1) ?>
+                <span class="font-normal text-stone-400">(<?= (int) $cafe['rating_count'] ?>)</span>
+            </p>
+        <?php endif; ?>
         <?php if (isset($cafe['distance_km'])): ?>
             <p class="text-[11px] font-semibold text-accent"><?= number_format((float) $cafe['distance_km'], 1) ?> km</p>
         <?php endif; ?>
@@ -72,6 +106,13 @@ function render_cafe_card_list(array $cafe): void {
                 <span class="truncate"><?= htmlspecialchars($cafe['cafe_name'], ENT_QUOTES, 'UTF-8') ?></span>
                 <?php if (!empty($cafe['is_verified'])): ?><?php icon('check-badge-solid', 'w-4 h-4 shrink-0 text-accent'); ?><?php endif; ?>
             </p>
+            <?php if (!empty($cafe['rating_count'])): ?>
+                <p class="mt-0.5 flex items-center gap-0.5 text-[11px] font-bold text-stone-700">
+                    <?php icon('star-solid', 'w-3 h-3 text-amber-400'); ?>
+                    <?= number_format((float) $cafe['rating_avg'], 1) ?>
+                    <span class="font-normal text-stone-400">(<?= (int) $cafe['rating_count'] ?> reviews)</span>
+                </p>
+            <?php endif; ?>
             <p class="mt-0.5 line-clamp-1 text-xs text-stone-500"><?= htmlspecialchars($cafe['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
             <p class="mt-0.5 flex items-center gap-1 truncate text-[11px] text-stone-400">
                 <?php if (!empty($cafe['address'])): ?><?php icon('map-pin', 'w-3 h-3 shrink-0'); ?><?= htmlspecialchars($cafe['address'], ENT_QUOTES, 'UTF-8') ?><?php endif; ?>
@@ -110,6 +151,30 @@ function render_avatar(?string $url, string $name, string $size_classes = 'w-9 h
         $initial = mb_strtoupper(mb_substr(trim($name) !== '' ? $name : '?', 0, 1));
         ?><div class="<?= $size_classes ?> shrink-0 rounded-full bg-coffee/10 flex items-center justify-center text-sm font-bold text-coffee"><?= htmlspecialchars($initial, ENT_QUOTES, 'UTF-8') ?></div><?php
     }
+}
+
+// Tagged-product chip rendered inside a post card. Expects a post row
+// from Post::getFeed()/getByIdWithMeta() with tagged_product_* columns.
+function render_product_chip(array $post): void {
+    if (empty($post['product_id']) || empty($post['tagged_product_name'])) {
+        return;
+    }
+    ?>
+    <a href="/menu/view.php?id=<?= (int) $post['product_id'] ?>" class="mt-2 flex items-center gap-2.5 rounded-xl border border-stone-200 bg-cream p-2.5 transition-colors hover:border-accent">
+        <div class="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-stone-200">
+            <?php if (!empty($post['tagged_product_image'])): ?>
+                <img src="<?= htmlspecialchars($post['tagged_product_image'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-full w-full object-cover">
+            <?php else: ?>
+                <div class="flex h-full w-full items-center justify-center text-stone-400"><?php icon('beaker', 'w-5 h-5'); ?></div>
+            <?php endif; ?>
+        </div>
+        <div class="min-w-0 flex-1">
+            <p class="truncate text-[13px] font-bold text-stone-900"><?= htmlspecialchars($post['tagged_product_name'], ENT_QUOTES, 'UTF-8') ?></p>
+            <p class="text-[11px] font-black text-coffee">&#8369;<?= number_format((float) $post['tagged_product_price'], 2) ?></p>
+        </div>
+        <span class="shrink-0 text-[11px] font-bold text-accent">View item &rarr;</span>
+    </a>
+    <?php
 }
 
 // Empty state — $icon_name is a Heroicon name from includes/icons.php.

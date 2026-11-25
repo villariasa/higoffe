@@ -15,6 +15,9 @@ class Post {
         $sql = "SELECT p.*,
                        u.full_name AS author_name, u.avatar_url AS author_avatar_url,
                        c.cafe_name, c.logo_url,
+                       tc.cafe_name AS tagged_cafe_name,
+                       tp.product_name AS tagged_product_name, tp.image_url AS tagged_product_image,
+                       tp.base_price AS tagged_product_price, tp.cafe_id AS tagged_product_cafe_id,
                        (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) AS like_count,
                        (SELECT COUNT(*) FROM post_comments pc WHERE pc.post_id = p.post_id) AS comment_count,
                        EXISTS (
@@ -23,24 +26,58 @@ class Post {
                        ) AS liked_by_viewer
                 FROM posts p
                 JOIN users u ON p.author_user_id = u.user_id
-                LEFT JOIN cafes c ON p.cafe_id = c.cafe_id";
+                LEFT JOIN cafes c ON p.cafe_id = c.cafe_id
+                LEFT JOIN cafes tc ON p.tagged_cafe_id = tc.cafe_id
+                LEFT JOIN products tp ON p.product_id = tp.product_id";
         $params = ["viewer_user_id" => $viewer_user_id];
         $conditions = [];
         if ($only_cafe_id !== null) {
-            $conditions[] = "p.cafe_id = :cafe_id";
+            // A café's page shows posts authored AS the café plus
+            // check-ins tagged at it — including cafe_only posts, since
+            // the café page IS their intended audience.
+            $conditions[] = "(p.cafe_id = :cafe_id OR p.tagged_cafe_id = :cafe_id)";
             $params["cafe_id"] = $only_cafe_id;
+        } else {
+            // Global feed / profiles: cafe_only posts are hidden from
+            // everyone except their own author.
+            $conditions[] = "(p.visibility = 'public' OR p.author_user_id = :viewer_vis)";
+            $params["viewer_vis"] = $viewer_user_id;
         }
         if ($only_author_id !== null) {
             $conditions[] = "p.author_user_id = :author_id";
             $params["author_id"] = $only_author_id;
         }
-        if ($conditions) {
-            $sql .= " WHERE " . implode(" AND ", $conditions);
-        }
+        $sql .= " WHERE " . implode(" AND ", $conditions);
         $sql .= " ORDER BY p.created_at DESC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    // Single post with the same author/café/likes/comments metadata the
+    // feed query returns — used by the permalink page (feed/post.php).
+    public function getByIdWithMeta(int $viewer_user_id, int $post_id) {
+        $sql = "SELECT p.*,
+                       u.full_name AS author_name, u.avatar_url AS author_avatar_url,
+                       c.cafe_name, c.logo_url,
+                       tc.cafe_name AS tagged_cafe_name,
+                       tp.product_name AS tagged_product_name, tp.image_url AS tagged_product_image,
+                       tp.base_price AS tagged_product_price, tp.cafe_id AS tagged_product_cafe_id,
+                       (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) AS like_count,
+                       (SELECT COUNT(*) FROM post_comments pc WHERE pc.post_id = p.post_id) AS comment_count,
+                       EXISTS (
+                           SELECT 1 FROM post_likes pl2
+                           WHERE pl2.post_id = p.post_id AND pl2.user_id = :viewer_user_id
+                       ) AS liked_by_viewer
+                FROM posts p
+                JOIN users u ON p.author_user_id = u.user_id
+                LEFT JOIN cafes c ON p.cafe_id = c.cafe_id
+                LEFT JOIN cafes tc ON p.tagged_cafe_id = tc.cafe_id
+                LEFT JOIN products tp ON p.product_id = tp.product_id
+                WHERE p.post_id = :post_id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["viewer_user_id" => $viewer_user_id, "post_id" => $post_id]);
+        return $stmt->fetch();
     }
 
     public function getById(int $post_id) {
@@ -52,13 +89,18 @@ class Post {
 
     // $cafe_id is NULL for a personal post; set it only when the author is
     // posting as the café they own (feed/create_post.php enforces that).
-    public function create(int $author_user_id, ?int $cafe_id, string $caption, string $image_url) {
-        $sql = "INSERT INTO posts (author_user_id, cafe_id, caption, image_url)
-                VALUES (:author_user_id, :cafe_id, :caption, :image_url) RETURNING post_id";
+    // $product_id optionally tags the drink/menu item the post is about.
+    public function create(int $author_user_id, ?int $cafe_id, string $caption, string $image_url, ?int $product_id = null, ?int $tagged_cafe_id = null, string $visibility = 'public') {
+        $visibility = $visibility === 'cafe_only' ? 'cafe_only' : 'public';
+        $sql = "INSERT INTO posts (author_user_id, cafe_id, tagged_cafe_id, product_id, visibility, caption, image_url)
+                VALUES (:author_user_id, :cafe_id, :tagged_cafe_id, :product_id, :visibility, :caption, :image_url) RETURNING post_id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             "author_user_id" => $author_user_id,
             "cafe_id"        => $cafe_id,
+            "tagged_cafe_id" => $tagged_cafe_id,
+            "product_id"     => $product_id,
+            "visibility"     => $visibility,
             "caption"        => $caption,
             "image_url"      => $image_url,
         ]);
@@ -66,6 +108,10 @@ class Post {
     }
 
     public function delete(int $post_id) {
+        // Likes/comments reference posts by FK — delete children first or
+        // Postgres rejects the delete on any post that has engagement.
+        $this->pdo->prepare("DELETE FROM post_likes WHERE post_id = :post_id")->execute(["post_id" => $post_id]);
+        $this->pdo->prepare("DELETE FROM post_comments WHERE post_id = :post_id")->execute(["post_id" => $post_id]);
         $sql = "DELETE FROM posts WHERE post_id = :post_id";
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute(["post_id" => $post_id]);

@@ -1,36 +1,34 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
-require_once __DIR__ . '/../models/Conversation.php';
 require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../includes/components.php';
-require_role('customer');
 
+// Both roles land here now: customers see their café chats, sellers see
+// their active conversations (claiming still happens in the queue).
 $pdo = (new Database())->connect();
-$conversationModel = new Conversation($pdo);
-$conversations = $conversationModel->getForCustomer((int) $_SESSION['user_id']);
+$user_id = (int) $_SESSION['user_id'];
+$role = $_SESSION['role'];
+
+if ($role !== 'customer' && $role !== 'seller') {
+    header("Location: /index.php");
+    exit;
+}
 
 $page_title = 'Messages';
 $back_url = '/feed/index.php';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<?php if (empty($conversations)): ?>
-    <?php render_empty_state('chat-bubble', 'No conversations yet', 'Visit a café and tap "Chat & Order" to start an inquiry.'); ?>
-<?php else: ?>
-    <div class="divide-y divide-stone-100 lg:mx-auto lg:mt-4 lg:max-w-2xl lg:divide-y-0 lg:space-y-2 lg:px-6">
-        <?php foreach ($conversations as $conv): ?>
-            <a href="/chat/conversation.php?id=<?= (int) $conv['conversation_id'] ?>" class="flex items-center gap-3 bg-white px-4 py-3 active:bg-stone-50 lg:rounded-2xl lg:border lg:border-stone-100 lg:hover:shadow-md lg:transition-shadow">
-                <?php render_avatar($conv['logo_url'] ?? null, $conv['cafe_name'], 'w-11 h-11'); ?>
-                <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-bold text-stone-900"><?= htmlspecialchars($conv['cafe_name'], ENT_QUOTES, 'UTF-8') ?></p>
-                    <p class="text-[11px] text-stone-400">Last activity <?= htmlspecialchars(date('M j, g:i A', strtotime($conv['last_message_at'])), ENT_QUOTES, 'UTF-8') ?></p>
-                </div>
-                <?php
-                $pill = ['waiting' => 'bg-amber-100 text-amber-700', 'active' => 'bg-green-100 text-green-700', 'resolved' => 'bg-stone-100 text-stone-500'][$conv['status']] ?? 'bg-stone-100 text-stone-500';
-                ?>
-                <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase <?= $pill ?>"><?= htmlspecialchars($conv['status'], ENT_QUOTES, 'UTF-8') ?></span>
-            </a>
-        <?php endforeach; ?>
+<!-- Mobile: full-width list. Desktop: two-pane with a placeholder pane. -->
+<div class="lg:grid lg:h-[calc(100vh-7rem)] lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-0 lg:px-8 lg:pt-2">
+    <div class="lg:overflow-y-auto lg:rounded-l-2xl lg:border lg:border-stone-200 lg:bg-white">
+        <?php include __DIR__ . '/_conversation_list.php'; ?>
     </div>
-<?php endif; ?>
+    <div class="hidden lg:flex lg:items-center lg:justify-center lg:rounded-r-2xl lg:border lg:border-l-0 lg:border-stone-200 lg:bg-cream">
+        <div class="text-center">
+            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-stone-400"><?php icon('chat-bubble', 'w-7 h-7'); ?></span>
+            <p class="mt-3 text-sm font-semibold text-stone-500">Select a conversation</p>
+        </div>
+    </div>
+</div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

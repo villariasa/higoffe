@@ -48,7 +48,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
                     <div class="flex shrink-0 items-center gap-2">
                         <a href="/menu/edit.php?id=<?= (int) $product['product_id'] ?>" class="rounded-full border border-stone-200 px-3 py-1.5 text-[11px] font-bold text-stone-600">Edit</a>
-                        <form method="post" action="/menu/delete.php" onsubmit="return confirm('Delete this product?');">
+                        <form method="post" action="/menu/delete.php" data-confirm="Delete this product?">
                             <input type="hidden" name="product_id" value="<?= (int) $product['product_id'] ?>">
                             <button type="submit" class="text-[11px] font-bold text-red-500">Delete</button>
                         </form>

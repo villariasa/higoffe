@@ -39,7 +39,28 @@ if ($current_role === 'customer') {
 } else {
     $desktop_nav = [];
 }
+
+// Admin panel navigation — rendered as a persistent sidebar (desktop)
+// and a horizontal scroll bar (mobile) on every admin page.
+$admin_nav = [
+    ['label' => 'Dashboard', 'href' => '/admin/index.php',        'match' => '/admin/index.php',        'icon' => 'home'],
+    ['label' => 'Users',     'href' => '/admin/users.php',        'match' => '/admin/users.php',        'icon' => 'user-circle'],
+    ['label' => 'Cafés',     'href' => '/admin/cafes.php',        'match' => '/admin/cafes.php',        'icon' => 'storefront'],
+    ['label' => 'Posts',     'href' => '/admin/posts.php',        'match' => '/admin/posts.php',        'icon' => 'photo'],
+    ['label' => 'Reports',   'href' => '/admin/reports.php',      'match' => '/admin/reports.php',      'icon' => 'flag'],
+    ['label' => 'Sales',     'href' => '/admin/sales_report.php', 'match' => '/admin/sales_report.php', 'icon' => 'receipt'],
+    ['label' => 'SMTP',      'href' => '/admin/settings.php',     'match' => '/admin/settings.php',     'icon' => 'cog'],
+];
 $current_path = $_SERVER['SCRIPT_NAME'] ?? '';
+
+// Unread-notification badge. Reuses the page's existing $pdo (every app
+// page connects before including the header) — no extra connection; if a
+// page didn't connect, the badge just shows 0.
+$unread_notifications = 0;
+if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
+    require_once __DIR__ . '/../models/Notification.php';
+    $unread_notifications = (new Notification($pdo))->countUnread((int) $_SESSION['user_id']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -63,6 +84,32 @@ $current_path = $_SERVER['SCRIPT_NAME'] ?? '';
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js"></script>
+    <!-- Turbo Drive: intercepts link clicks, fetches the next page over
+         AJAX, swaps the <body> and merges the <head>, and updates the URL
+         via the History API — SPA-feel navigation, PHP pages unchanged. -->
+    <script type="module">
+        import * as Turbo from "https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.12/dist/turbo.es2017-esm.min.js";
+        // Forms submit natively (full reload): our PHP re-renders error
+        // states with HTTP 200 on POST, which Turbo Drive refuses to
+        // render ("form responses must redirect"). Links stay smooth.
+        Turbo.setFormMode("off");
+    </script>
+    <!-- Don't flash stale cached previews of dynamic pages (feed counts,
+         chat messages) between navigations. -->
+    <meta name="turbo-cache-control" content="no-preview">
+    <script>
+    // Head scripts run once — Turbo merges the head and skips scripts it
+    // has already seen, so these listeners never double-register.
+    NProgress.configure({ showSpinner: false, trickleSpeed: 120 });
+    document.addEventListener('turbo:visit', function () { NProgress.start(); });
+    document.addEventListener('turbo:load', function () { NProgress.done(); });
+    document.addEventListener('DOMContentLoaded', function () { NProgress.done(); });
+    // Fallback for native navigations (form submits, auth pages).
+    window.addEventListener('beforeunload', function () { NProgress.start(); });
+    window.addEventListener('pageshow', function () { NProgress.done(); });
+    </script>
+    <script src="/includes/ui.js" defer></script>
+    <script src="/includes/location.js" defer></script>
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -70,46 +117,97 @@ $current_path = $_SERVER['SCRIPT_NAME'] ?? '';
         #nprogress .bar { background: #e0701a; height: 3px; }
         #nprogress .peg { box-shadow: 0 0 10px #e0701a, 0 0 5px #e0701a; }
         #nprogress .spinner { display: none; }
+        .turbo-progress-bar { display: none; } /* NProgress is the one loading bar */
     </style>
 </head>
 <body class="bg-stone-200 text-stone-800"<?= !empty($wants_location) ? ' data-wants-location="1"' : '' ?>>
-<script>
-NProgress.configure({ showSpinner: false, trickleSpeed: 120 });
-window.addEventListener('beforeunload', function () { NProgress.start(); });
-window.addEventListener('pageshow', function () { NProgress.done(); });
-document.addEventListener('DOMContentLoaded', function () { NProgress.done(); });
-</script>
 
-<div class="relative mx-auto min-h-screen w-full bg-cream shadow-xl <?= $is_admin ? 'max-w-5xl' : ($is_app_user ? 'max-w-md lg:max-w-6xl' : 'max-w-md') ?> <?= $is_app_user ? 'pb-20 lg:pb-10' : '' ?>">
+<div class="relative mx-auto min-h-screen w-full bg-cream <?= $is_admin ? 'max-w-none lg:grid lg:grid-cols-[240px_minmax(0,1fr)]' : ($is_app_user ? 'max-w-md shadow-xl lg:max-w-none lg:shadow-none lg:grid lg:grid-cols-[260px_minmax(0,1fr)]' : 'max-w-md shadow-xl') ?> <?= $is_app_user ? 'pb-20 lg:pb-0' : '' ?>">
 
-<?php if ($is_app_user): ?>
-    <!-- Desktop navbar (hidden on mobile) -->
-    <header class="sticky top-0 z-40 hidden border-b border-stone-200 bg-cream/95 backdrop-blur lg:block">
-        <div class="flex items-center justify-between px-6 py-3">
-            <a href="/index.php" class="text-xl font-black tracking-tight text-coffee">Higoffe<span class="text-accent">.</span></a>
-            <nav class="flex items-center gap-1">
-                <?php foreach ($desktop_nav as $item): ?>
+<?php if ($is_admin): ?>
+    <!-- Admin sidebar (desktop) -->
+    <aside class="sticky top-0 hidden h-screen flex-col border-r border-stone-200 bg-coffee-dark px-3 py-5 lg:flex">
+        <a href="/admin/index.php" class="px-3 text-xl font-black tracking-tight text-white">Higoffe<span class="text-accent">.</span> <span class="text-[10px] font-bold uppercase tracking-widest text-white/50">Admin</span></a>
+        <nav class="mt-6 flex flex-1 flex-col gap-1">
+            <?php foreach ($admin_nav as $item): ?>
+                <?php $active = strpos($current_path, $item['match']) === 0; ?>
+                <a href="<?= $item['href'] ?>"
+                   class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-colors <?= $active ? 'bg-accent text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' ?>">
+                    <?php icon($item['icon'], 'w-5 h-5'); ?>
+                    <?= $item['label'] ?>
+                </a>
+            <?php endforeach; ?>
+        </nav>
+        <a href="/auth/logout.php" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-white/70 hover:bg-white/10 hover:text-white">
+            <?php icon('logout', 'w-5 h-5'); ?> Log out
+        </a>
+    </aside>
+
+    <div class="min-w-0">
+        <!-- Admin mobile top bar + horizontal nav -->
+        <header class="sticky top-0 z-40 border-b border-stone-200 bg-coffee-dark lg:hidden">
+            <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-base font-black tracking-tight text-white">Higoffe<span class="text-accent">.</span> <span class="text-[9px] font-bold uppercase tracking-widest text-white/50">Admin</span></span>
+                <a href="/auth/logout.php" aria-label="Log out" class="text-white/70"><?php icon('logout', 'w-5 h-5'); ?></a>
+            </div>
+            <nav class="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-2">
+                <?php foreach ($admin_nav as $item): ?>
                     <?php $active = strpos($current_path, $item['match']) === 0; ?>
-                    <a href="<?= $item['href'] ?>"
-                       class="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold <?= $active ? 'bg-coffee text-white' : 'text-stone-600 hover:bg-stone-100' ?>">
-                        <?php icon($item['icon'], 'w-4 h-4'); ?>
-                        <?= $item['label'] ?>
-                    </a>
+                    <a href="<?= $item['href'] ?>" class="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold <?= $active ? 'bg-accent text-white' : 'text-white/70' ?>"><?= $item['label'] ?></a>
                 <?php endforeach; ?>
             </nav>
-            <div class="flex items-center gap-2">
-                <button type="button" class="location-chip flex items-center gap-1 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-600 transition-colors hover:border-coffee active:opacity-80" title="Click to use current location">
-                    <?php icon('map-pin-solid', 'w-3.5 h-3.5 text-accent'); ?>
-                    <span class="location-chip-label">Set location</span>
-                </button>
-                <a href="/auth/logout.php" aria-label="Log out" class="flex h-9 w-9 items-center justify-center rounded-full text-stone-500 hover:bg-stone-100">
-                    <?php icon('logout', 'w-5 h-5'); ?>
+        </header>
+    <main class="px-4 py-6 lg:px-8">
+<?php else: ?>
+
+<?php if ($is_app_user): ?>
+    <!-- Desktop left sidebar (hidden on mobile) -->
+    <aside class="sticky top-0 hidden h-screen flex-col border-r border-stone-200 bg-white px-4 py-5 lg:flex">
+        <a href="/index.php" class="px-3 text-2xl font-black tracking-tight text-coffee">Higoffe<span class="text-accent">.</span></a>
+
+        <button type="button" class="location-chip mt-4 flex items-center gap-1.5 rounded-xl border border-stone-200 bg-cream px-3 py-2 text-xs font-semibold text-stone-600 transition-colors hover:border-coffee" title="Click to use current location">
+            <?php icon('map-pin-solid', 'w-3.5 h-3.5 text-accent'); ?>
+            <span class="location-chip-label">Set location</span>
+        </button>
+
+        <nav class="mt-5 flex flex-1 flex-col gap-1">
+            <?php foreach ($desktop_nav as $item): ?>
+                <?php $active = strpos($current_path, $item['match']) === 0; ?>
+                <a href="<?= $item['href'] ?>"
+                   class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-semibold transition-colors <?= $active ? 'bg-coffee text-white' : 'text-stone-600 hover:bg-cream' ?>">
+                    <?php icon($item['icon'], 'w-5 h-5'); ?>
+                    <?= $item['label'] ?>
                 </a>
+            <?php endforeach; ?>
+            <a href="/notifications.php"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-semibold transition-colors <?= strpos($current_path, '/notifications.php') === 0 ? 'bg-coffee text-white' : 'text-stone-600 hover:bg-cream' ?>">
+                <span class="relative">
+                    <?php icon('bell', 'w-5 h-5'); ?>
+                    <?php if ($unread_notifications > 0): ?>
+                        <span class="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"><?= $unread_notifications > 9 ? '9+' : $unread_notifications ?></span>
+                    <?php endif; ?>
+                </span>
+                Notifications
+            </a>
+        </nav>
+
+        <!-- User mini-card -->
+        <div class="mt-4 flex items-center gap-2.5 rounded-xl border border-stone-200 bg-cream p-2.5">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-coffee/10 text-sm font-bold text-coffee">
+                <?= htmlspecialchars(mb_strtoupper(mb_substr((string) ($_SESSION['full_name'] ?? '?'), 0, 1)), ENT_QUOTES, 'UTF-8') ?>
             </div>
+            <div class="min-w-0 flex-1">
+                <p class="truncate text-[13px] font-bold text-stone-900"><?= htmlspecialchars((string) ($_SESSION['full_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
+                <p class="text-[10px] capitalize text-stone-400"><?= htmlspecialchars((string) $current_role, ENT_QUOTES, 'UTF-8') ?></p>
+            </div>
+            <a href="/auth/logout.php" aria-label="Log out" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-stone-400 hover:bg-stone-200 hover:text-stone-600">
+                <?php icon('logout', 'w-4 h-4'); ?>
+            </a>
         </div>
-    </header>
+    </aside>
 <?php endif; ?>
 
+<div class="min-w-0 <?= $is_app_user ? 'lg:pb-10' : '' ?>">
 <?php if (!$no_shell): ?>
     <?php if ($page_title !== null): ?>
         <!-- Mobile sub-page top bar: back + title -->
@@ -137,6 +235,12 @@ document.addEventListener('DOMContentLoaded', function () { NProgress.done(); })
                             <?php icon('map-pin-solid', 'w-3 h-3 text-accent'); ?>
                             <span class="location-chip-label">Set location</span>
                         </button>
+                        <a href="/notifications.php" aria-label="Notifications" class="relative flex h-9 w-9 items-center justify-center rounded-full text-stone-500 active:bg-stone-200">
+                            <?php icon('bell', 'w-5 h-5'); ?>
+                            <?php if ($unread_notifications > 0): ?>
+                                <span class="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"><?= $unread_notifications > 9 ? '9+' : $unread_notifications ?></span>
+                            <?php endif; ?>
+                        </a>
                     <?php endif; ?>
                     <?php if ($current_role): ?>
                         <a href="/auth/logout.php" aria-label="Log out" class="flex h-9 w-9 items-center justify-center rounded-full text-stone-500 active:bg-stone-200">
@@ -150,3 +254,4 @@ document.addEventListener('DOMContentLoaded', function () { NProgress.done(); })
 <?php endif; ?>
 
 <main>
+<?php endif; // admin vs app shell ?>

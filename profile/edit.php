@@ -41,7 +41,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <form method="post" class="space-y-4">
         <div class="rounded-2xl bg-white p-3.5">
-            <?php render_image_upload_field($upload_auth, 'avatar_url', 'Profile photo', $user['avatar_url'] ?? ''); ?>
+            <?php render_image_upload_field($upload_auth, 'avatar_url', 'Profile photo', $user['avatar_url'] ?? '', 2); ?>
         </div>
         <div class="rounded-2xl bg-white p-3.5">
             <label class="mb-1 block text-xs font-semibold text-stone-500">Bio</label>
