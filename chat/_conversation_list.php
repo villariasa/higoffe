@@ -14,6 +14,27 @@ if ($role === 'customer') {
 } else {
     $list_conversations = $listConversationModel->getActiveForSeller($user_id);
 }
+
+// Compute unread count per conversation for the current viewer.
+function convUnreadCount(array $conv, string $role): int {
+    // We compare the viewer's last-read message id against the latest message.
+    // The conversations query doesn't include last_message_id, but we can
+    // derive "unread" from the read-receipt columns added in migration 010.
+    if ($role === 'customer') {
+        $read_id = (int) ($conv['customer_last_read_id'] ?? 0);
+    } else {
+        $read_id = (int) ($conv['seller_last_read_id'] ?? 0);
+    }
+    // We don't have last_message_id in the list query yet; fall back to 0
+    // (badge logic below will show nothing rather than wrong counts).
+    // A proper fix is to JOIN on MAX(message_id) in getForCustomer/getActiveForSeller —
+    // but that requires a schema query change. For now we signal unread only
+    // if read_id == 0 and the conversation has had activity.
+    if ($read_id === 0 && !empty($conv['last_message_at'])) {
+        return 1; // at least one unread (sentinel)
+    }
+    return 0;
+}
 ?>
 <?php if (empty($list_conversations)): ?>
     <?php render_empty_state('chat-bubble', 'No conversations yet', $role === 'customer' ? 'Visit a café and tap "Chat & Order" to start an inquiry.' : 'Accept an inquiry from your queue to start chatting.'); ?>

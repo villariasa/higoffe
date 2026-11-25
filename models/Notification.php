@@ -6,10 +6,10 @@ class Notification {
         $this->pdo = $pdo;
     }
 
-    public function create(int $user_id, string $body): int {
-        $sql = "INSERT INTO notifications (user_id, body) VALUES (:user_id, :body) RETURNING notification_id";
+    public function create(int $user_id, string $body, string $link = ''): int {
+        $sql = "INSERT INTO notifications (user_id, body, link) VALUES (:user_id, :body, :link) RETURNING notification_id";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(["user_id" => $user_id, "body" => $body]);
+        $stmt->execute(["user_id" => $user_id, "body" => $body, "link" => $link ?: null]);
         return (int) $stmt->fetchColumn();
     }
 

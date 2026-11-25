@@ -183,4 +183,19 @@ class Order {
                   AND status_id = (SELECT status_id FROM order_statuses WHERE status_label = 'Completed')";
         return (float) $this->pdo->query($sql)->fetchColumn();
     }
+
+    // Returns the most recent non-terminal order for a conversation (for the
+    // seller's chat header badge — shows order status while chatting).
+    public function getActiveForConversation(int $conversation_id) {
+        $sql = "SELECT o.order_id, os.status_label
+                FROM orders o
+                JOIN order_statuses os ON o.status_id = os.status_id
+                WHERE o.conversation_id = :conversation_id
+                  AND os.status_label NOT IN ('Completed', 'Cancelled')
+                ORDER BY o.created_at DESC
+                LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["conversation_id" => $conversation_id]);
+        return $stmt->fetch() ?: null;
+    }
 }

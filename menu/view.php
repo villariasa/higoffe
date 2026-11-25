@@ -85,14 +85,17 @@ require_once __DIR__ . '/../includes/header.php';
 
             <div class="mt-3 flex gap-2">
                 <?php if ($is_customer): ?>
+                    <a href="/orders/quick_order.php?cafe_id=<?= (int) $product['cafe_id'] ?>&product_id=<?= $product_id ?>" class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent py-2.5 text-sm font-bold text-white hover:opacity-90">
+                        <?php icon('shopping-bag', 'w-4 h-4'); ?> Order Now
+                    </a>
                     <form method="post" action="/chat/start.php" class="flex-1">
                         <input type="hidden" name="cafe_id" value="<?= (int) $product['cafe_id'] ?>">
-                        <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-accent py-2.5 text-sm font-bold text-white hover:opacity-90">
+                        <button type="submit" class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/40 bg-cream py-2.5 text-sm font-bold text-accent hover:border-accent">
                             <?php icon('chat-bubble', 'w-4 h-4'); ?> Ask about this
                         </button>
                     </form>
                 <?php endif; ?>
-                <a href="/feed/create_post.php?product_id=<?= $product_id ?>" class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-coffee/30 bg-cream py-2.5 text-sm font-bold text-coffee hover:border-coffee">
+                <a href="/feed/create_post.php?product_id=<?= $product_id ?>" class="flex <?= $is_customer ? '' : 'flex-1' ?> items-center justify-center gap-1.5 rounded-xl border border-coffee/30 bg-cream py-2.5 text-sm font-bold text-coffee hover:border-coffee px-3">
                     <?php icon('photo', 'w-4 h-4'); ?> Share a post
                 </a>
             </div>

@@ -73,10 +73,14 @@ if ($role === 'customer') {
 }
 
 $quick_replies = [
-    "Hi! What can I get started for you today?",
+    "Hi! What can I get started for you today? ☕",
     "That's available — any size or add-ons?",
-    "Got it, preparing your order card now.",
-    "Your order is ready for pickup!",
+    "Got it, I'm preparing your order now.",
+    "Your order is confirmed! We'll get it ready soon.",
+    "Your order is ready for pickup! 🎉",
+    "Payment confirmed, thank you! 🙏",
+    "Sorry, that item is currently unavailable. Can I suggest something else?",
+    "Could you please send your payment proof?",
 ];
 
 $no_shell = true; // custom chat top bar below
@@ -103,6 +107,15 @@ require_once __DIR__ . '/../includes/header.php';
         <?php if ($role === 'customer'): ?>
             <a href="/orders/create_order_card.php?conversation_id=<?= $conversation_id ?>" class="shrink-0 rounded-full bg-accent px-3 py-1.5 text-[11px] font-bold text-white">+ Order</a>
         <?php elseif ($role === 'seller' && $conversation['status'] === 'active'): ?>
+            <?php
+            // Show active order status badge for the seller if there's a live order on this conversation.
+            $active_order = $orderModel->getActiveForConversation($conversation_id);
+            ?>
+            <?php if ($active_order): ?>
+                <a href="/orders/view.php?id=<?= (int) $active_order['order_id'] ?>" class="shrink-0 rounded-full bg-amber-100 px-3 py-1.5 text-[11px] font-bold text-amber-700">
+                    Order: <?= htmlspecialchars($active_order['status_label'], ENT_QUOTES, 'UTF-8') ?>
+                </a>
+            <?php endif; ?>
             <form method="post" data-confirm="Mark this inquiry resolved?" class="shrink-0">
                 <input type="hidden" name="action" value="resolve">
                 <button type="submit" class="px-2 text-[11px] font-semibold text-stone-400">Resolve</button>

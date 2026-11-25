@@ -191,9 +191,13 @@ require_once __DIR__ . '/../includes/header.php';
                             </span>
                         </p>
                         <p class="line-clamp-1 text-xs text-stone-500"><?= htmlspecialchars($product['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
-                        <div class="mt-1 flex items-center justify-between">
+                        <div class="mt-1 flex items-center justify-between gap-2">
                             <p class="text-sm font-black text-coffee">&#8369;<?= number_format((float) $product['base_price'], 2) ?></p>
-                            <span class="text-[11px] font-bold text-accent">View item &rarr;</span>
+                            <?php if ($is_customer): ?>
+                                <a href="/orders/quick_order.php?cafe_id=<?= $cafe_id ?>&product_id=<?= (int) $product['product_id'] ?>" onclick="event.stopPropagation()" class="shrink-0 rounded-full bg-accent px-3 py-1 text-[11px] font-bold text-white active:opacity-80">Order Now</a>
+                            <?php else: ?>
+                                <span class="text-[11px] font-bold text-accent">View item &rarr;</span>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </a>
