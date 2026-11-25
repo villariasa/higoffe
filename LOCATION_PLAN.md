@@ -1,8 +1,6 @@
-# Higoffe — "Nearby Cafés" Location Feature (PLANNED, NOT YET IMPLEMENTED)
+# Higoffe — "Nearby Cafés" Location Feature (IMPLEMENTED)
 
-Status: deferred by decision. `includes/location.js` already exists as
-prepared groundwork but is NOT included by any page yet. Nothing else
-below is built.
+Status: fully implemented across database schema, models, seller settings, customer discover, and café profile pages.
 
 ## Goal
 Let a customer allow browser location access and see cafés sorted by

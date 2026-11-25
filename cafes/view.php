@@ -39,6 +39,20 @@ if ($is_customer) {
     $is_following = $followModel->isFollowing((int) $_SESSION['user_id'], $cafe_id);
 }
 
+$lat = isset($_GET['lat']) && is_numeric($_GET['lat']) ? (float) $_GET['lat'] : null;
+$lng = isset($_GET['lng']) && is_numeric($_GET['lng']) ? (float) $_GET['lng'] : null;
+
+$distance_km = null;
+if ($lat !== null && $lng !== null && !empty($cafe['latitude']) && !empty($cafe['longitude'])) {
+    $c_lat = (float) $cafe['latitude'];
+    $c_lng = (float) $cafe['longitude'];
+    $theta = $lng - $c_lng;
+    $dist = sin(deg2rad($lat)) * sin(deg2rad($c_lat)) + cos(deg2rad($lat)) * cos(deg2rad($c_lat)) * cos(deg2rad($theta));
+    $dist = acos(min(1.0, max(-1.0, $dist)));
+    $distance_km = rad2deg($dist) * 60 * 1.853159616; // km
+}
+
+$wants_location = true;
 $no_shell = true; // custom hero header with a floating back button
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -70,12 +84,26 @@ require_once __DIR__ . '/../includes/header.php';
                 <?= htmlspecialchars($cafe['cafe_name'], ENT_QUOTES, 'UTF-8') ?>
                 <?php if ($cafe['is_verified']): ?><?php icon('check-badge-solid', 'w-4 h-4 text-accent'); ?><?php endif; ?>
             </h1>
-            <?php if (!empty($cafe['address'])): ?>
-                <p class="mt-0.5 flex items-center gap-1 text-[11px] text-stone-500">
-                    <?php icon('map-pin-solid', 'w-3 h-3 text-accent'); ?>
-                    <?= htmlspecialchars($cafe['address'], ENT_QUOTES, 'UTF-8') ?>
-                </p>
-            <?php endif; ?>
+            <div class="mt-0.5 flex flex-wrap items-center gap-2">
+                <?php if (!empty($cafe['address'])): ?>
+                    <p class="flex items-center gap-1 text-[11px] text-stone-500">
+                        <?php icon('map-pin-solid', 'w-3 h-3 text-accent'); ?>
+                        <?= htmlspecialchars($cafe['address'], ENT_QUOTES, 'UTF-8') ?>
+                    </p>
+                <?php endif; ?>
+                <?php if ($distance_km !== null): ?>
+                    <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-accent">
+                        <?= number_format($distance_km, 1) ?> km away
+                    </span>
+                <?php endif; ?>
+                <?php if (!empty($cafe['latitude']) && !empty($cafe['longitude'])): ?>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($cafe['latitude'] . ',' . $cafe['longitude']) ?>"
+                       target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center gap-1 text-[11px] font-bold text-accent hover:underline">
+                        <?php icon('arrow-top-right', 'w-3 h-3'); ?> Directions
+                    </a>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 
@@ -176,4 +204,5 @@ document.querySelectorAll('.report-form').forEach(function (form) {
     });
 });
 </script>
+<script src="/includes/location.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
