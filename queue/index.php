@@ -2,7 +2,9 @@
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/Cafe.php';
 require_once __DIR__ . '/../models/Conversation.php';
+require_once __DIR__ . '/../models/Order.php';
 require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../includes/components.php';
 require_role('seller');
 
 $pdo = (new Database())->connect();
@@ -19,56 +21,92 @@ $waiting = $conversationModel->getWaitingQueue((int) $cafe['cafe_id']);
 $active = $conversationModel->getActiveForSeller((int) $_SESSION['user_id']);
 $resolved = $conversationModel->getResolvedForCafe((int) $cafe['cafe_id']);
 
+$orderModel = new Order($pdo);
+$order_summary = [];
+foreach (['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup'] as $status_label) {
+    $order_summary[$status_label] = count($orderModel->getForSellerByStatus((int) $cafe['cafe_id'], $status_label));
+}
+
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<h1 class="text-xl font-bold mb-4">Inquiry queue</h1>
 
-<div class="grid md:grid-cols-3 gap-4">
-    <div>
-        <h2 class="font-semibold mb-2">Waiting (<?= count($waiting) ?>)</h2>
-        <div id="waiting-list" class="space-y-2">
+<!-- Café header strip -->
+<div class="flex items-center gap-3 px-4 pt-3">
+    <?php render_avatar($cafe['logo_url'] ?? null, $cafe['cafe_name'], 'w-10 h-10'); ?>
+    <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-black text-stone-900"><?= htmlspecialchars($cafe['cafe_name'], ENT_QUOTES, 'UTF-8') ?></p>
+        <p class="text-[11px] text-stone-400">Seller dashboard</p>
+    </div>
+    <a href="/menu/index.php" class="shrink-0 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-[11px] font-bold text-stone-600">Menu</a>
+    <a href="/cafes/profile.php" class="shrink-0 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-[11px] font-bold text-stone-600">Edit café</a>
+</div>
+
+<!-- Order status summary -->
+<div class="mt-4 grid grid-cols-4 gap-2 px-4">
+    <?php foreach ($order_summary as $label => $count): ?>
+        <a href="/orders/seller_dashboard.php" class="rounded-xl bg-white p-2.5 text-center">
+            <p class="text-lg font-black <?= $count > 0 ? 'text-accent' : 'text-stone-300' ?>"><?= $count ?></p>
+            <p class="text-[9px] font-semibold uppercase leading-tight text-stone-500"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></p>
+        </a>
+    <?php endforeach; ?>
+</div>
+
+<!-- Waiting queue -->
+<section class="mt-5">
+    <?php render_section_header('New inquiries (' . count($waiting) . ')'); ?>
+    <?php if (empty($waiting)): ?>
+        <?php render_empty_state('✅', 'Queue is clear', 'New customer inquiries will appear here, oldest first.'); ?>
+    <?php else: ?>
+        <div id="waiting-list" class="space-y-2 px-4">
             <?php foreach ($waiting as $conv): ?>
-                <div class="bg-white border border-stone-200 rounded-lg p-3">
-                    <p class="font-semibold text-sm"><?= htmlspecialchars($conv['customer_name'], ENT_QUOTES, 'UTF-8') ?></p>
-                    <p class="text-xs text-stone-400">Waiting since <?= htmlspecialchars($conv['created_at'], ENT_QUOTES, 'UTF-8') ?></p>
-                    <button type="button" class="claim-btn mt-2 text-sm bg-amber-700 text-white rounded px-3 py-1" data-conversation-id="<?= (int) $conv['conversation_id'] ?>">Accept</button>
+                <div class="flex items-center gap-3 rounded-2xl bg-white p-3">
+                    <?php render_avatar(null, $conv['customer_name'], 'w-10 h-10'); ?>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-bold text-stone-900"><?= htmlspecialchars($conv['customer_name'], ENT_QUOTES, 'UTF-8') ?></p>
+                        <p class="text-[11px] text-stone-400">Waiting since <?= htmlspecialchars(date('g:i A', strtotime($conv['created_at'])), ENT_QUOTES, 'UTF-8') ?></p>
+                    </div>
+                    <button type="button" class="claim-btn shrink-0 rounded-full bg-accent px-4 py-2 text-xs font-bold text-white active:opacity-80" data-conversation-id="<?= (int) $conv['conversation_id'] ?>">Accept</button>
                 </div>
             <?php endforeach; ?>
-            <?php if (empty($waiting)): ?>
-                <p class="text-stone-500 text-sm">No waiting inquiries.</p>
-            <?php endif; ?>
         </div>
-    </div>
+    <?php endif; ?>
+</section>
 
-    <div>
-        <h2 class="font-semibold mb-2">Active (<?= count($active) ?>)</h2>
-        <div class="space-y-2">
+<!-- Active conversations -->
+<section class="mt-5">
+    <?php render_section_header('Active chats (' . count($active) . ')'); ?>
+    <?php if (empty($active)): ?>
+        <?php render_empty_state('💬', 'No active conversations'); ?>
+    <?php else: ?>
+        <div class="divide-y divide-stone-100">
             <?php foreach ($active as $conv): ?>
-                <a href="/chat/conversation.php?id=<?= (int) $conv['conversation_id'] ?>" class="block bg-white border border-stone-200 rounded-lg p-3 hover:border-amber-400">
-                    <p class="font-semibold text-sm"><?= htmlspecialchars($conv['customer_name'], ENT_QUOTES, 'UTF-8') ?></p>
-                    <p class="text-xs text-stone-400">Last activity <?= htmlspecialchars($conv['last_message_at'], ENT_QUOTES, 'UTF-8') ?></p>
+                <a href="/chat/conversation.php?id=<?= (int) $conv['conversation_id'] ?>" class="flex items-center gap-3 bg-white px-4 py-3 active:bg-stone-50">
+                    <?php render_avatar(null, $conv['customer_name'], 'w-10 h-10'); ?>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-bold text-stone-900"><?= htmlspecialchars($conv['customer_name'], ENT_QUOTES, 'UTF-8') ?></p>
+                        <p class="text-[11px] text-stone-400">Last activity <?= htmlspecialchars(date('M j, g:i A', strtotime($conv['last_message_at'])), ENT_QUOTES, 'UTF-8') ?></p>
+                    </div>
+                    <span class="shrink-0 rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-bold uppercase text-green-700">Active</span>
                 </a>
             <?php endforeach; ?>
-            <?php if (empty($active)): ?>
-                <p class="text-stone-500 text-sm">No active conversations.</p>
-            <?php endif; ?>
         </div>
-    </div>
+    <?php endif; ?>
+</section>
 
-    <div>
-        <h2 class="font-semibold mb-2">Resolved (<?= count($resolved) ?>)</h2>
-        <div class="space-y-2">
-            <?php foreach ($resolved as $conv): ?>
-                <div class="bg-white border border-stone-200 rounded-lg p-3 opacity-70">
-                    <p class="font-semibold text-sm"><?= htmlspecialchars($conv['customer_name'], ENT_QUOTES, 'UTF-8') ?></p>
+<!-- Resolved -->
+<?php if (!empty($resolved)): ?>
+    <section class="mt-5">
+        <?php render_section_header('Resolved (' . count($resolved) . ')'); ?>
+        <div class="divide-y divide-stone-100 opacity-70">
+            <?php foreach (array_slice($resolved, 0, 5) as $conv): ?>
+                <div class="flex items-center gap-3 bg-white px-4 py-2.5">
+                    <?php render_avatar(null, $conv['customer_name'], 'w-8 h-8'); ?>
+                    <p class="truncate text-[13px] font-semibold text-stone-600"><?= htmlspecialchars($conv['customer_name'], ENT_QUOTES, 'UTF-8') ?></p>
                 </div>
             <?php endforeach; ?>
-            <?php if (empty($resolved)): ?>
-                <p class="text-stone-500 text-sm">Nothing resolved yet.</p>
-            <?php endif; ?>
         </div>
-    </div>
-</div>
+    </section>
+<?php endif; ?>
 
 <script>
 document.querySelectorAll('.claim-btn').forEach(function (btn) {

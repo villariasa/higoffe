@@ -37,39 +37,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $upload_auth = Uploads::issueToken((int) $_SESSION['user_id'], 'cafe');
 
+$page_title = $cafe ? 'Edit your café' : 'Set up your café';
+$back_url = '/queue/index.php';
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-xl mx-auto bg-white border border-stone-200 rounded-lg p-6">
-    <h1 class="text-xl font-bold mb-4"><?= $cafe ? 'Edit your café' : 'Set up your café' ?></h1>
 
+<div class="px-4 py-4">
     <?php if ($saved): ?>
-        <p class="bg-green-50 text-green-700 text-sm rounded p-3 mb-4">Saved.</p>
+        <p class="mb-3 rounded-xl bg-green-50 p-3 text-sm text-green-700">Saved.</p>
     <?php endif; ?>
     <?php if ($error !== ''): ?>
-        <p class="bg-red-50 text-red-700 text-sm rounded p-3 mb-4"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+        <p class="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>
 
     <form method="post" class="space-y-3">
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Café name</label>
-            <input type="text" name="cafe_name" required value="<?= htmlspecialchars($cafe['cafe_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
+        <div class="space-y-3 rounded-2xl bg-white p-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Café name</label>
+                <input type="text" name="cafe_name" required value="<?= htmlspecialchars($cafe['cafe_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Description</label>
+                <textarea name="description" rows="3" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none"><?= htmlspecialchars($cafe['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Address</label>
+                <input type="text" name="address" value="<?= htmlspecialchars($cafe['address'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
+            </div>
+            <?php render_image_upload_field($upload_auth, 'logo_url', 'Logo', $cafe['logo_url'] ?? ''); ?>
+            <?php render_image_upload_field($upload_auth, 'cover_url', 'Cover photo', $cafe['cover_url'] ?? ''); ?>
         </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Description</label>
-            <textarea name="description" rows="3" class="w-full border border-stone-300 rounded p-2"><?= htmlspecialchars($cafe['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
-        </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Address</label>
-            <input type="text" name="address" value="<?= htmlspecialchars($cafe['address'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
-        </div>
-        <?php render_image_upload_field($upload_auth, 'logo_url', 'Logo', $cafe['logo_url'] ?? ''); ?>
-        <?php render_image_upload_field($upload_auth, 'cover_url', 'Cover photo', $cafe['cover_url'] ?? ''); ?>
-        <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Save</button>
+        <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Save</button>
     </form>
 
     <?php if ($cafe): ?>
-        <p class="text-sm text-stone-500 mt-4">
-            <a href="/cafes/view.php?id=<?= (int) $cafe['cafe_id'] ?>" class="text-amber-700 underline">View your public café page</a>
+        <p class="mt-3 text-center text-sm">
+            <a href="/cafes/view.php?id=<?= (int) $cafe['cafe_id'] ?>" class="font-semibold text-accent">View your public café page &rarr;</a>
         </p>
     <?php endif; ?>
 </div>

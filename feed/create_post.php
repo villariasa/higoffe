@@ -6,9 +6,8 @@ require_once __DIR__ . '/../models/Post.php';
 require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../includes/image_upload_field.php';
 
-// Anyone can post now — a seller posting shares it as their café
-// (cafe_id set); a customer post is personal (cafe_id NULL). See
-// migrations/004_social_first_pivot.sql.
+// Anyone can post — a seller can share as their café (cafe_id set); a
+// customer post is personal (cafe_id NULL).
 $pdo = (new Database())->connect();
 $cafe = null;
 if ($_SESSION['role'] === 'seller') {
@@ -43,28 +42,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $upload_auth = Uploads::issueToken((int) $_SESSION['user_id'], 'post');
 
+$page_title = 'New post';
+$back_url = '/feed/index.php';
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-lg mx-auto bg-white border border-stone-200 rounded-xl p-6">
-    <h1 class="text-xl font-bold mb-4">New post</h1>
 
+<div class="px-4 py-4">
     <?php if ($error !== ''): ?>
-        <p class="bg-red-50 text-red-700 text-sm rounded p-3 mb-4"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+        <p class="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>
 
-    <form method="post" class="space-y-3">
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">What's on your mind?</label>
-            <textarea name="caption" rows="4" placeholder="Share a drink, a café moment, a recommendation..." class="w-full border border-stone-300 rounded p-2"></textarea>
+    <form method="post" class="space-y-4">
+        <textarea name="caption" rows="4" placeholder="Share a drink, a café moment, a recommendation..."
+                  class="w-full rounded-2xl border border-stone-200 bg-white p-3.5 text-sm focus:border-coffee focus:outline-none"></textarea>
+
+        <div class="rounded-2xl bg-white p-3.5">
+            <?php render_image_upload_field($upload_auth, 'image_url', 'Photo (optional)', ''); ?>
         </div>
-        <?php render_image_upload_field($upload_auth, 'image_url', 'Photo (optional)', ''); ?>
+
         <?php if ($cafe !== null): ?>
-            <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="post_as_cafe" <?= $post_as_cafe ? 'checked' : '' ?>>
-                Post as <?= htmlspecialchars($cafe['cafe_name'], ENT_QUOTES, 'UTF-8') ?> (café announcement/promo) instead of yourself
+            <label class="flex items-center gap-2.5 rounded-2xl bg-white p-3.5 text-[13px] text-stone-700">
+                <input type="checkbox" name="post_as_cafe" <?= $post_as_cafe ? 'checked' : '' ?> class="accent-accent">
+                Post as <span class="font-bold"><?= htmlspecialchars($cafe['cafe_name'], ENT_QUOTES, 'UTF-8') ?></span> (promo/announcement)
             </label>
         <?php endif; ?>
-        <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Post</button>
+
+        <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Post</button>
     </form>
 </div>
 <script src="/includes/image_upload.js"></script>

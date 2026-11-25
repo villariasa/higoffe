@@ -4,7 +4,10 @@ require_once __DIR__ . '/../config/Uploads.php';
 require_once __DIR__ . '/../models/Conversation.php';
 require_once __DIR__ . '/../models/Message.php';
 require_once __DIR__ . '/../models/Order.php';
+require_once __DIR__ . '/../models/Cafe.php';
+require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../includes/components.php';
 
 $conversation_id = (int) ($_GET['id'] ?? 0);
 
@@ -52,23 +55,54 @@ $messages = $messageModel->getAllForConversation($conversation_id);
 $orderModel = new Order($pdo);
 $upload_auth = Uploads::issueToken($user_id, 'chat');
 
+// Header identity: customer sees the café; seller sees the customer.
+if ($role === 'customer') {
+    $cafeModel = new Cafe($pdo);
+    $other = $cafeModel->getById((int) $conversation['cafe_id']);
+    $other_name = $other['cafe_name'] ?? 'Café';
+    $other_avatar = $other['logo_url'] ?? null;
+    $back = '/chat/inbox.php';
+} else {
+    $userModel = new User($pdo);
+    $other = $userModel->getById((int) $conversation['customer_user_id']);
+    $other_name = $other['full_name'] ?? 'Customer';
+    $other_avatar = $other['avatar_url'] ?? null;
+    $back = '/queue/index.php';
+}
+
+$quick_replies = [
+    "Hi! What can I get started for you today?",
+    "That's available — any size or add-ons?",
+    "Got it, preparing your order card now.",
+    "Your order is ready for pickup!",
+];
+
+$no_shell = true; // custom chat top bar below
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-xl mx-auto bg-white border border-stone-200 rounded-2xl shadow-sm flex flex-col" style="height: 70vh;">
-    <div class="p-4 border-b border-stone-200 flex items-center justify-between">
-        <h1 class="font-bold">Conversation #<?= (int) $conversation_id ?></h1>
-        <?php if ($role === 'seller' && $conversation['status'] === 'active'): ?>
-            <div class="flex gap-3 text-sm">
-                <a href="/orders/create_order_card.php?conversation_id=<?= $conversation_id ?>" class="text-amber-700 underline">Create order</a>
-                <form method="post" onsubmit="return confirm('Mark this inquiry resolved?');">
-                    <input type="hidden" name="action" value="resolve">
-                    <button type="submit" class="text-stone-500 underline">Resolve</button>
-                </form>
-            </div>
-        <?php endif; ?>
-    </div>
 
-    <div id="message-list" class="flex-1 overflow-y-auto p-4 space-y-3"
+<div class="flex flex-col" style="height: calc(100dvh - 5rem);">
+    <!-- Chat top bar -->
+    <header class="sticky top-0 z-40 flex items-center gap-2 border-b border-stone-200 bg-cream/95 px-2 py-2 backdrop-blur">
+        <a href="<?= $back ?>" aria-label="Back" class="flex h-9 w-9 items-center justify-center rounded-full active:bg-stone-200">
+            <svg class="h-5 w-5 text-stone-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </a>
+        <?php render_avatar($other_avatar, $other_name, 'w-8 h-8'); ?>
+        <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-bold text-stone-900"><?= htmlspecialchars($other_name, ENT_QUOTES, 'UTF-8') ?></p>
+            <p class="text-[10px] uppercase tracking-wide text-stone-400"><?= htmlspecialchars($conversation['status'], ENT_QUOTES, 'UTF-8') ?></p>
+        </div>
+        <?php if ($role === 'seller' && $conversation['status'] === 'active'): ?>
+            <a href="/orders/create_order_card.php?conversation_id=<?= $conversation_id ?>" class="shrink-0 rounded-full bg-accent px-3 py-1.5 text-[11px] font-bold text-white">+ Order</a>
+            <form method="post" onsubmit="return confirm('Mark this inquiry resolved?');" class="shrink-0">
+                <input type="hidden" name="action" value="resolve">
+                <button type="submit" class="px-2 text-[11px] font-semibold text-stone-400">Resolve</button>
+            </form>
+        <?php endif; ?>
+    </header>
+
+    <!-- Messages -->
+    <div id="message-list" class="flex-1 space-y-2.5 overflow-y-auto px-3 py-3"
          data-conversation-id="<?= $conversation_id ?>"
          data-after-id="<?= !empty($messages) ? (int) end($messages)['message_id'] : 0 ?>">
         <?php foreach ($messages as $m): ?>
@@ -76,15 +110,30 @@ require_once __DIR__ . '/../includes/header.php';
         <?php endforeach; ?>
     </div>
 
-    <form id="send-form" class="p-3 border-t border-stone-200 flex items-center gap-2">
-        <label class="shrink-0 cursor-pointer text-stone-500 hover:text-amber-700" title="Send a photo">
+    <!-- Quick replies (seller only) -->
+    <?php if ($role === 'seller'): ?>
+        <div class="no-scrollbar flex gap-2 overflow-x-auto border-t border-stone-100 bg-cream px-3 py-2">
+            <?php foreach ($quick_replies as $qr): ?>
+                <button type="button" class="quick-reply shrink-0 rounded-full border border-coffee/30 bg-white px-3 py-1.5 text-[11px] font-semibold text-coffee active:bg-coffee active:text-white"
+                        data-text="<?= htmlspecialchars($qr, ENT_QUOTES, 'UTF-8') ?>">
+                    <?= htmlspecialchars($qr, ENT_QUOTES, 'UTF-8') ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
+    <!-- Composer -->
+    <form id="send-form" class="flex items-center gap-2 border-t border-stone-200 bg-white px-3 py-2.5">
+        <label class="shrink-0 cursor-pointer text-xl text-stone-400 active:text-accent" title="Send a photo">
             &#128247;
             <input type="file" id="chat-image-input" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
         </label>
-        <input type="text" id="body-input" placeholder="Type a message..." class="flex-1 border border-stone-300 rounded-full px-3 py-2 text-sm">
-        <button type="submit" class="bg-amber-700 text-white rounded-full px-4 py-2 text-sm font-semibold">Send</button>
+        <input type="text" id="body-input" placeholder="Type a message..." class="h-10 flex-1 rounded-full border border-stone-200 bg-cream px-4 text-sm focus:border-coffee focus:outline-none">
+        <button type="submit" aria-label="Send" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white active:opacity-80">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 12 15-7-7 15-2-6-6-2Z"/></svg>
+        </button>
     </form>
-    <p id="chat-status" class="px-3 pb-2 text-xs text-stone-400"></p>
+    <p id="chat-status" class="bg-white px-4 pb-1 text-[11px] text-stone-400"></p>
 </div>
 
 <script>
@@ -106,31 +155,26 @@ require_once __DIR__ . '/../includes/header.php';
     function renderBubble(m) {
         if (m.message_type === 'system') {
             const p = document.createElement('p');
-            p.className = 'text-center text-xs text-stone-400 italic py-1';
+            p.className = 'text-center text-[11px] text-stone-400 italic py-0.5';
             p.textContent = m.body || '';
             return p;
         }
         const isMine = m.sender_user_id == myUserId;
         const wrap = document.createElement('div');
         wrap.className = 'flex items-end gap-2 ' + (isMine ? 'justify-end' : 'justify-start');
-        if (!isMine) {
-            const avatar = document.createElement('div');
-            avatar.className = 'w-6 h-6 rounded-full bg-stone-200 shrink-0';
-            wrap.appendChild(avatar);
-        }
         const bubble = document.createElement('div');
         bubble.className = 'max-w-[75%] rounded-2xl px-3 py-2 text-sm ' +
-            (isMine ? 'bg-amber-700 text-white rounded-br-sm' : 'bg-stone-100 text-stone-800 rounded-bl-sm');
+            (isMine ? 'bg-coffee text-white rounded-br-md' : 'bg-white border border-stone-200 text-stone-800 rounded-bl-md');
         if (m.message_type === 'order_card') {
             const a = document.createElement('a');
-            a.className = 'underline text-xs';
+            a.className = 'underline text-xs font-semibold';
             a.href = '/orders/view.php?id=' + m.order_id;
-            a.textContent = 'New order card — view / respond';
+            a.textContent = '☕ New order card — view / respond';
             bubble.appendChild(a);
         } else if (m.message_type === 'image' && m.image_url) {
             const img = document.createElement('img');
             img.src = m.image_url;
-            img.className = 'rounded-lg max-w-full max-h-64 object-cover';
+            img.className = 'rounded-xl max-w-full max-h-64 object-cover';
             bubble.appendChild(img);
         } else {
             bubble.textContent = m.body || '';
@@ -150,18 +194,26 @@ require_once __DIR__ . '/../includes/header.php';
         if (rows.length) list.scrollTop = list.scrollHeight;
     }
 
-    document.getElementById('send-form').addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const input = document.getElementById('body-input');
-        const body = input.value.trim();
+    async function sendText(body) {
         if (!body) return;
-        input.value = '';
         await fetch('/chat/send_message.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'conversation_id=' + conversationId + '&body=' + encodeURIComponent(body)
         });
         poll();
+    }
+
+    document.getElementById('send-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const input = document.getElementById('body-input');
+        const body = input.value.trim();
+        input.value = '';
+        sendText(body);
+    });
+
+    document.querySelectorAll('.quick-reply').forEach(function (btn) {
+        btn.addEventListener('click', function () { sendText(btn.dataset.text); });
     });
 
     document.getElementById('chat-image-input').addEventListener('change', async function (e) {
@@ -196,6 +248,7 @@ require_once __DIR__ . '/../includes/header.php';
         e.target.value = '';
     });
 
+    list.scrollTop = list.scrollHeight;
     setInterval(poll, 3000);
 })();
 </script>

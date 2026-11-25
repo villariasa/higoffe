@@ -20,21 +20,25 @@ if ($user && !$expired) {
     $_SESSION['full_name'] = $user['full_name'];
 }
 
+$no_shell = true;
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-md mx-auto bg-white border border-stone-200 rounded-lg p-6 text-center">
+<div class="flex min-h-screen flex-col items-center justify-center px-6 text-center">
     <?php if ($user && !$expired): ?>
-        <h1 class="text-xl font-bold mb-2">Email verified</h1>
-        <p class="text-stone-600 mb-4">Your account is confirmed.</p>
-        <a href="/index.php" class="inline-block bg-amber-700 text-white rounded px-4 py-2 font-semibold">Continue</a>
+        <span class="text-4xl">&#9989;</span>
+        <h1 class="mt-3 text-xl font-black text-stone-900">Email verified</h1>
+        <p class="mt-1 text-sm text-stone-500">Your account is confirmed. Welcome to Higoffe!</p>
+        <a href="/index.php" class="mt-5 w-full rounded-xl bg-accent py-3 text-sm font-bold text-white">Continue</a>
     <?php elseif ($user && $expired): ?>
-        <h1 class="text-xl font-bold mb-2">Link expired</h1>
-        <p class="text-stone-600 mb-4">That verification link is more than 24 hours old.</p>
-        <a href="/auth/resend_verification.php?email=<?= urlencode($user['email']) ?>" class="inline-block bg-amber-700 text-white rounded px-4 py-2 font-semibold">Send a new link</a>
+        <span class="text-4xl">&#9203;</span>
+        <h1 class="mt-3 text-xl font-black text-stone-900">Link expired</h1>
+        <p class="mt-1 text-sm text-stone-500">That verification link is more than 24 hours old.</p>
+        <a href="/auth/resend_verification.php?email=<?= urlencode($user['email']) ?>" class="mt-5 w-full rounded-xl bg-accent py-3 text-sm font-bold text-white">Send a new link</a>
     <?php else: ?>
-        <h1 class="text-xl font-bold mb-2">Invalid link</h1>
-        <p class="text-stone-600 mb-4">This verification link isn't valid.</p>
-        <a href="/auth/login.php" class="inline-block bg-amber-700 text-white rounded px-4 py-2 font-semibold">Back to login</a>
+        <span class="text-4xl">&#10060;</span>
+        <h1 class="mt-3 text-xl font-black text-stone-900">Invalid link</h1>
+        <p class="mt-1 text-sm text-stone-500">This verification link isn't valid.</p>
+        <a href="/auth/login.php" class="mt-5 w-full rounded-xl bg-accent py-3 text-sm font-bold text-white">Back to login</a>
     <?php endif; ?>
 </div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

@@ -37,29 +37,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$no_shell = true;
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-md mx-auto bg-white border border-stone-200 rounded-lg p-6">
-    <h1 class="text-xl font-bold mb-4">Log in</h1>
+
+<div class="flex min-h-screen flex-col justify-center px-6 py-10">
+    <div class="mb-8 text-center">
+        <p class="text-3xl font-black text-coffee">Higoffe<span class="text-accent">.</span></p>
+        <p class="mt-1 text-sm text-stone-500">Kape ta, storya ta.</p>
+    </div>
 
     <?php if ($error !== ''): ?>
-        <p class="bg-red-50 text-red-700 text-sm rounded p-3 mb-4"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+        <p class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>
 
     <form method="post" class="space-y-3">
         <div>
-            <label class="block text-sm text-stone-600 mb-1">Email</label>
-            <input type="email" name="email" required value="<?= htmlspecialchars($submitted_email, ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
+            <label class="mb-1 block text-xs font-semibold text-stone-500">Email</label>
+            <input type="email" name="email" required value="<?= htmlspecialchars($submitted_email, ENT_QUOTES, 'UTF-8') ?>" class="w-full rounded-xl border border-stone-200 bg-white p-2.5 text-sm focus:border-coffee focus:outline-none">
         </div>
         <?php render_password_field('password', 'Password'); ?>
-        <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Log in</button>
+        <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Log in</button>
     </form>
 
-    <p class="text-sm text-stone-500 mt-4">
-        Trouble logging in? <a href="/auth/resend_verification.php" class="text-amber-700 underline">Resend verification email</a>.<br>
-        New here? <a href="/auth/register_customer.php" class="text-amber-700 underline">Create a customer account</a>
-        or <a href="/auth/register_seller.php" class="text-amber-700 underline">register your café</a>.
-    </p>
+    <div class="mt-6 space-y-1.5 text-center text-[13px] text-stone-500">
+        <p>Trouble logging in? <a href="/auth/resend_verification.php" class="font-semibold text-accent">Resend verification email</a></p>
+        <p>New here? <a href="/auth/register_customer.php" class="font-semibold text-accent">Create an account</a>
+           or <a href="/auth/register_seller.php" class="font-semibold text-accent">register your café</a></p>
+    </div>
 </div>
 <script src="/includes/password_toggle.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

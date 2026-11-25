@@ -38,45 +38,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$no_shell = true;
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-md mx-auto bg-white border border-stone-200 rounded-lg p-6">
-    <h1 class="text-xl font-bold mb-4">Create a customer account</h1>
+
+<div class="flex min-h-screen flex-col justify-center px-6 py-10">
+    <div class="mb-6 text-center">
+        <p class="text-2xl font-black text-coffee">Create your account</p>
+        <p class="mt-1 text-sm text-stone-500">Discover cafés, share moments, order through chat.</p>
+    </div>
 
     <?php if ($registered): ?>
-        <p class="bg-green-50 text-green-700 text-sm rounded p-3 mb-4">
-            Account created — check <?= htmlspecialchars($registered_email, ENT_QUOTES, 'UTF-8') ?> for a verification link before logging in.
+        <p class="rounded-xl bg-green-50 p-3 text-sm text-green-700">
+            Account created — check <b><?= htmlspecialchars($registered_email, ENT_QUOTES, 'UTF-8') ?></b> for a verification link before logging in.
         </p>
         <?php if ($error !== ''): ?>
-            <p class="bg-red-50 text-red-700 text-sm rounded p-3 mb-4"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+            <p class="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
         <?php endif; ?>
-        <p class="text-sm"><a href="/auth/login.php" class="text-amber-700 underline">Go to login</a></p>
+        <a href="/auth/login.php" class="mt-4 block w-full rounded-xl bg-accent py-3 text-center text-sm font-bold text-white">Go to login</a>
     <?php else: ?>
         <?php if ($error !== ''): ?>
-            <p class="bg-red-50 text-red-700 text-sm rounded p-3 mb-4"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+            <p class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
         <?php endif; ?>
 
         <form method="post" class="space-y-3">
             <div>
-                <label class="block text-sm text-stone-600 mb-1">Full name</label>
-                <input type="text" name="full_name" required class="w-full border border-stone-300 rounded p-2">
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Full name</label>
+                <input type="text" name="full_name" required class="w-full rounded-xl border border-stone-200 bg-white p-2.5 text-sm focus:border-coffee focus:outline-none">
             </div>
             <div>
-                <label class="block text-sm text-stone-600 mb-1">Email</label>
-                <input type="email" name="email" required class="w-full border border-stone-300 rounded p-2">
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Email</label>
+                <input type="email" name="email" required class="w-full rounded-xl border border-stone-200 bg-white p-2.5 text-sm focus:border-coffee focus:outline-none">
             </div>
             <div>
-                <label class="block text-sm text-stone-600 mb-1">Phone (optional)</label>
-                <input type="text" name="phone" class="w-full border border-stone-300 rounded p-2">
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Phone (optional)</label>
+                <input type="text" name="phone" class="w-full rounded-xl border border-stone-200 bg-white p-2.5 text-sm focus:border-coffee focus:outline-none">
             </div>
             <?php render_password_field('password', 'Password'); ?>
-            <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Register</button>
+            <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Register</button>
         </form>
 
-        <p class="text-sm text-stone-500 mt-4">
-            Already have an account? <a href="/auth/login.php" class="text-amber-700 underline">Log in</a>.
-            Registering as a café owner instead? <a href="/auth/register_seller.php" class="text-amber-700 underline">Seller sign up</a>.
-        </p>
+        <div class="mt-6 space-y-1.5 text-center text-[13px] text-stone-500">
+            <p>Already have an account? <a href="/auth/login.php" class="font-semibold text-accent">Log in</a></p>
+            <p>Café owner? <a href="/auth/register_seller.php" class="font-semibold text-accent">Register your café</a></p>
+        </div>
     <?php endif; ?>
 </div>
 <script src="/includes/password_toggle.js"></script>

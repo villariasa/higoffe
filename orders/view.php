@@ -4,6 +4,7 @@ require_once __DIR__ . '/../models/Cafe.php';
 require_once __DIR__ . '/../models/Order.php';
 require_once __DIR__ . '/../models/OrderItem.php';
 require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../includes/components.php';
 
 $order_id = (int) ($_GET['id'] ?? 0);
 
@@ -44,59 +45,106 @@ $next_statuses = $is_owner_seller ? $orderModel->getAllowedNextStatuses($order['
 $orderItemModel = new OrderItem($pdo);
 $items = $orderItemModel->getForOrder($order_id);
 
+// Grab-style progress timeline
+$timeline = $order['fulfillment_type'] === 'delivery'
+    ? ['Pending', 'Confirmed', 'Preparing', 'Out for Delivery', 'Completed']
+    : ['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup', 'Completed'];
+$current_step = array_search($order['status_label'], $timeline, true);
+$is_cancelled = $order['status_label'] === 'Cancelled';
+
+$page_title = 'Order #' . $order_id;
+$back_url = $role === 'customer' ? '/orders/customer_history.php' : '/orders/seller_dashboard.php';
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-xl mx-auto bg-white border border-stone-200 rounded-lg p-6">
-    <h1 class="text-xl font-bold mb-2">Order #<?= (int) $order_id ?></h1>
-    <p class="text-sm text-stone-500 mb-4">Status: <span class="font-semibold"><?= htmlspecialchars($order['status_label'], ENT_QUOTES, 'UTF-8') ?></span></p>
 
-    <ul class="space-y-2 mb-4 border-b border-stone-200 pb-4">
-        <?php foreach ($items as $item): ?>
-            <li class="flex justify-between text-sm">
-                <span><?= (int) $item['quantity'] ?>&times; <?= htmlspecialchars($item['product_name'], ENT_QUOTES, 'UTF-8') ?><?php if ($item['size_label']): ?> (<?= htmlspecialchars($item['size_label'], ENT_QUOTES, 'UTF-8') ?>)<?php endif; ?></span>
-                <span>&#8369;<?= number_format((float) $item['line_total'], 2) ?></span>
-            </li>
-        <?php endforeach; ?>
-    </ul>
+<div class="space-y-3 px-4 py-4">
 
-    <p class="font-semibold mb-4">Total: &#8369;<?= number_format((float) $order['total_amount'], 2) ?></p>
+    <!-- Status timeline -->
+    <div class="rounded-2xl bg-white p-4">
+        <?php if ($is_cancelled): ?>
+            <p class="text-center text-sm font-bold text-red-500">This order was cancelled.</p>
+        <?php else: ?>
+            <div class="flex items-center">
+                <?php foreach ($timeline as $i => $step): ?>
+                    <?php $done = $current_step !== false && $i <= $current_step; ?>
+                    <div class="flex flex-col items-center <?= $i > 0 ? 'flex-1' : '' ?>">
+                        <div class="flex w-full items-center">
+                            <?php if ($i > 0): ?>
+                                <div class="h-0.5 flex-1 <?= $done ? 'bg-accent' : 'bg-stone-200' ?>"></div>
+                            <?php endif; ?>
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold <?= $done ? 'bg-accent text-white' : 'bg-stone-200 text-stone-400' ?>">
+                                <?= $done ? '✓' : $i + 1 ?>
+                            </span>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <p class="mt-2.5 text-center text-sm font-bold text-stone-900"><?= htmlspecialchars($order['status_label'], ENT_QUOTES, 'UTF-8') ?></p>
+            <p class="text-center text-[11px] capitalize text-stone-400"><?= htmlspecialchars($order['fulfillment_type'], ENT_QUOTES, 'UTF-8') ?><?php if (!empty($order['delivery_address'])): ?> · <?= htmlspecialchars($order['delivery_address'], ENT_QUOTES, 'UTF-8') ?><?php endif; ?></p>
+        <?php endif; ?>
+    </div>
 
-    <div class="border-t border-stone-200 pt-4 mb-4">
-        <p class="text-sm font-semibold mb-2">Payment</p>
+    <!-- Items -->
+    <div class="rounded-2xl bg-white p-4">
+        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Order summary</p>
+        <ul class="space-y-2">
+            <?php foreach ($items as $item): ?>
+                <li class="flex justify-between text-sm">
+                    <span class="text-stone-700"><?= (int) $item['quantity'] ?>&times; <?= htmlspecialchars($item['product_name'], ENT_QUOTES, 'UTF-8') ?><?php if ($item['size_label']): ?> <span class="text-stone-400">(<?= htmlspecialchars($item['size_label'], ENT_QUOTES, 'UTF-8') ?>)</span><?php endif; ?></span>
+                    <span class="font-semibold">&#8369;<?= number_format((float) $item['line_total'], 2) ?></span>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+        <div class="mt-3 space-y-1 border-t border-stone-100 pt-2.5 text-sm">
+            <p class="flex justify-between text-stone-500"><span>Subtotal</span><span>&#8369;<?= number_format((float) $order['subtotal'], 2) ?></span></p>
+            <p class="flex justify-between text-stone-500"><span>Additional charges</span><span>&#8369;<?= number_format((float) $order['additional_charges'], 2) ?></span></p>
+            <p class="flex justify-between text-base font-black text-stone-900"><span>Total</span><span>&#8369;<?= number_format((float) $order['total_amount'], 2) ?></span></p>
+        </div>
+    </div>
+
+    <!-- Payment -->
+    <div class="rounded-2xl bg-white p-4">
+        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Payment</p>
         <?php if ($order['payment_status'] === 'unpaid'): ?>
             <?php if ($role === 'customer'): ?>
-                <a href="/orders/submit_payment.php?id=<?= (int) $order_id ?>" class="inline-block bg-stone-800 text-white rounded px-4 py-2 text-sm font-semibold">Submit payment proof</a>
+                <a href="/orders/submit_payment.php?id=<?= (int) $order_id ?>" class="block w-full rounded-xl bg-coffee py-2.5 text-center text-sm font-bold text-white active:opacity-80">Submit payment proof</a>
             <?php else: ?>
                 <p class="text-sm text-stone-500">Waiting for the customer to submit payment proof.</p>
             <?php endif; ?>
         <?php elseif ($order['payment_status'] === 'proof_submitted'): ?>
             <?php if (!empty($order['payment_proof_url'])): ?>
                 <a href="<?= htmlspecialchars($order['payment_proof_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">
-                    <img src="<?= htmlspecialchars($order['payment_proof_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Payment proof" class="w-32 h-32 object-cover rounded-lg border border-stone-200 mb-2">
+                    <img src="<?= htmlspecialchars($order['payment_proof_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Payment proof" class="mb-2.5 h-32 w-32 rounded-xl border border-stone-200 object-cover">
                 </a>
             <?php endif; ?>
             <?php if ($is_owner_seller): ?>
                 <form method="post" action="/orders/confirm_payment.php">
                     <input type="hidden" name="order_id" value="<?= (int) $order_id ?>">
-                    <button type="submit" class="bg-amber-700 text-white rounded px-4 py-2 text-sm font-semibold">Confirm payment</button>
+                    <button type="submit" class="w-full rounded-xl bg-accent py-2.5 text-sm font-bold text-white active:opacity-80">Confirm payment</button>
                 </form>
             <?php else: ?>
                 <p class="text-sm text-stone-500">Proof submitted — waiting for the café to confirm.</p>
             <?php endif; ?>
         <?php else: ?>
-            <p class="text-sm text-green-700 font-semibold">&check; Payment confirmed</p>
+            <p class="text-sm font-bold text-green-600">&check; Payment confirmed</p>
         <?php endif; ?>
     </div>
 
+    <!-- Seller status actions -->
     <?php if ($is_owner_seller && !empty($next_statuses)): ?>
-        <div class="flex gap-2 flex-wrap">
-            <?php foreach ($next_statuses as $status): ?>
-                <form method="post" action="/orders/update_status.php">
-                    <input type="hidden" name="order_id" value="<?= (int) $order_id ?>">
-                    <input type="hidden" name="to_label" value="<?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?>">
-                    <button type="submit" class="bg-amber-700 text-white rounded px-4 py-2 text-sm font-semibold">Mark: <?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?></button>
-                </form>
-            <?php endforeach; ?>
+        <div class="rounded-2xl bg-white p-4">
+            <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Update status</p>
+            <div class="flex flex-wrap gap-2">
+                <?php foreach ($next_statuses as $status): ?>
+                    <form method="post" action="/orders/update_status.php">
+                        <input type="hidden" name="order_id" value="<?= (int) $order_id ?>">
+                        <input type="hidden" name="to_label" value="<?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?>">
+                        <button type="submit" class="rounded-full <?= $status === 'Cancelled' ? 'border border-red-300 text-red-500' : 'bg-coffee text-white' ?> px-4 py-2 text-xs font-bold active:opacity-80">
+                            <?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?>
+                        </button>
+                    </form>
+                <?php endforeach; ?>
+            </div>
         </div>
     <?php endif; ?>
 </div>

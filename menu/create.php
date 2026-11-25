@@ -38,30 +38,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $upload_auth = Uploads::issueToken((int) $_SESSION['user_id'], 'product');
 
+$page_title = 'Add product';
+$back_url = '/menu/index.php';
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-lg mx-auto bg-white border border-stone-200 rounded-lg p-6">
-    <h1 class="text-xl font-bold mb-4">Add a product</h1>
 
+<div class="px-4 py-4">
     <?php if ($error !== ''): ?>
-        <p class="bg-red-50 text-red-700 text-sm rounded p-3 mb-4"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+        <p class="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>
 
     <form method="post" class="space-y-3">
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Product name</label>
-            <input type="text" name="product_name" required class="w-full border border-stone-300 rounded p-2">
+        <div class="space-y-3 rounded-2xl bg-white p-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Product name</label>
+                <input type="text" name="product_name" required class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Description</label>
+                <textarea name="description" rows="3" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none"></textarea>
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Base price (&#8369;)</label>
+                <input type="number" step="0.01" min="0" name="base_price" required class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
+            </div>
+            <?php render_image_upload_field($upload_auth, 'image_url', 'Product photo', ''); ?>
         </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Description</label>
-            <textarea name="description" rows="3" class="w-full border border-stone-300 rounded p-2"></textarea>
-        </div>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Base price (&#8369;)</label>
-            <input type="number" step="0.01" min="0" name="base_price" required class="w-full border border-stone-300 rounded p-2">
-        </div>
-        <?php render_image_upload_field($upload_auth, 'image_url', 'Product photo', ''); ?>
-        <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Save and continue</button>
+        <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Save and continue</button>
     </form>
 </div>
 <script src="/includes/image_upload.js"></script>

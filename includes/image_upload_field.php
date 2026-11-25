@@ -21,7 +21,7 @@ function render_image_upload_field(array $auth, string $name, string $label, str
                 class="preview-img w-20 h-20 object-cover rounded-xl border border-stone-200 bg-stone-50 <?= $current_url === '' ? 'hidden' : '' ?>"
             >
             <div>
-                <label class="file-trigger inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 cursor-pointer hover:border-amber-600 hover:text-amber-700">
+                <label class="file-trigger inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 cursor-pointer active:border-accent active:text-accent">
                     &#128247; Choose photo
                     <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="file-input hidden">
                 </label>

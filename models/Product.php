@@ -20,6 +20,23 @@ class Product {
         return $stmt->fetchAll();
     }
 
+    // "Trending drinks" row on the Home screen — available products
+    // ranked by how often they've actually been ordered, newest first as
+    // the tiebreak so a fresh menu still fills the row.
+    public function getTrending(int $limit = 10) {
+        $sql = "SELECT p.*, c.cafe_name,
+                       (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.product_id = p.product_id) AS times_ordered
+                FROM products p
+                JOIN cafes c ON p.cafe_id = c.cafe_id
+                WHERE p.is_available = TRUE
+                ORDER BY times_ordered DESC, p.created_at DESC
+                LIMIT :limit";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
     public function getById(int $product_id) {
         $sql = "SELECT * FROM products WHERE product_id = :product_id";
         $stmt = $this->pdo->prepare($sql);

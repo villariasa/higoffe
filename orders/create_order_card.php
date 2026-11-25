@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cart = $_SESSION['order_draft'][$conversation_id];
 
         if (empty($cart)) {
-            $error = 'Add at least one item before finalizing.';
+            $error = 'Add at least one item before sending.';
         } else {
             $subtotal = array_sum(array_column($cart, 'line_total'));
             $orderModel = new Order($pdo);
@@ -125,31 +125,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $cart = $_SESSION['order_draft'][$conversation_id];
 $cart_subtotal = array_sum(array_column($cart, 'line_total'));
 
+$page_title = 'Create order card';
+$back_url = '/chat/conversation.php?id=' . $conversation_id;
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-2xl mx-auto space-y-6">
-    <h1 class="text-xl font-bold">Create order card</h1>
 
+<div class="space-y-3 px-4 py-4">
     <?php if ($error !== ''): ?>
-        <p class="bg-red-50 text-red-700 text-sm rounded p-3"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+        <p class="rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>
 
-    <div class="bg-white border border-stone-200 rounded-lg p-6">
-        <h2 class="font-semibold mb-3">Add item</h2>
+    <!-- Add item -->
+    <div class="rounded-2xl bg-white p-4">
+        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Add item</p>
         <form method="post" class="space-y-3">
             <input type="hidden" name="action" value="add_item">
             <input type="hidden" name="conversation_id" value="<?= $conversation_id ?>">
-            <div>
-                <label class="block text-sm text-stone-600 mb-1">Product</label>
-                <select name="product_id" required class="w-full border border-stone-300 rounded p-2" onchange="this.form.submit()">
-                    <option value="">-- Select product --</option>
-                    <?php foreach ($products as $p): ?>
-                        <option value="<?= (int) $p['product_id'] ?>" <?= $selected_product_id === (int) $p['product_id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($p['product_name'], ENT_QUOTES, 'UTF-8') ?> (&#8369;<?= number_format((float) $p['base_price'], 2) ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
+            <select name="product_id" required class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none" onchange="this.form.submit()">
+                <option value="">-- Select product --</option>
+                <?php foreach ($products as $p): ?>
+                    <option value="<?= (int) $p['product_id'] ?>" <?= $selected_product_id === (int) $p['product_id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($p['product_name'], ENT_QUOTES, 'UTF-8') ?> (&#8369;<?= number_format((float) $p['base_price'], 2) ?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
 
             <?php if ($selected_product_id):
                 $sizes = $sizeModel->getByProduct($selected_product_id);
@@ -157,8 +156,8 @@ require_once __DIR__ . '/../includes/header.php';
             ?>
                 <?php if (!empty($sizes)): ?>
                     <div>
-                        <label class="block text-sm text-stone-600 mb-1">Size</label>
-                        <select name="size_id" class="w-full border border-stone-300 rounded p-2">
+                        <label class="mb-1 block text-xs font-semibold text-stone-500">Size</label>
+                        <select name="size_id" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
                             <option value="">Default</option>
                             <?php foreach ($sizes as $s): ?>
                                 <option value="<?= (int) $s['size_id'] ?>"><?= htmlspecialchars($s['size_label'], ENT_QUOTES, 'UTF-8') ?> (+&#8369;<?= number_format((float) $s['price_addon'], 2) ?>)</option>
@@ -168,74 +167,79 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php endif; ?>
                 <?php if (!empty($addons)): ?>
                     <div>
-                        <label class="block text-sm text-stone-600 mb-1">Add-ons</label>
-                        <?php foreach ($addons as $a): ?>
-                            <label class="flex items-center gap-2 text-sm">
-                                <input type="checkbox" name="addon_ids[]" value="<?= (int) $a['addon_id'] ?>">
-                                <?= htmlspecialchars($a['addon_label'], ENT_QUOTES, 'UTF-8') ?> (+&#8369;<?= number_format((float) $a['addon_price'], 2) ?>)
-                            </label>
-                        <?php endforeach; ?>
+                        <label class="mb-1 block text-xs font-semibold text-stone-500">Add-ons</label>
+                        <div class="space-y-1.5">
+                            <?php foreach ($addons as $a): ?>
+                                <label class="flex items-center gap-2 text-sm text-stone-700">
+                                    <input type="checkbox" name="addon_ids[]" value="<?= (int) $a['addon_id'] ?>" class="accent-accent">
+                                    <?= htmlspecialchars($a['addon_label'], ENT_QUOTES, 'UTF-8') ?> (+&#8369;<?= number_format((float) $a['addon_price'], 2) ?>)
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
                 <?php endif; ?>
                 <input type="hidden" name="product_id" value="<?= $selected_product_id ?>">
-                <div>
-                    <label class="block text-sm text-stone-600 mb-1">Quantity</label>
-                    <input type="number" name="quantity" value="1" min="1" class="w-24 border border-stone-300 rounded p-2">
+                <div class="flex items-center gap-3">
+                    <label class="text-xs font-semibold text-stone-500">Qty</label>
+                    <input type="number" name="quantity" value="1" min="1" class="w-20 rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
+                    <button type="submit" class="ml-auto rounded-full bg-coffee px-4 py-2 text-xs font-bold text-white active:opacity-80">Add to order</button>
                 </div>
-                <button type="submit" class="bg-stone-800 text-white rounded px-4 py-2 text-sm">Add to order</button>
             <?php endif; ?>
         </form>
     </div>
 
-    <div class="bg-white border border-stone-200 rounded-lg p-6">
-        <h2 class="font-semibold mb-3">Order so far</h2>
-        <ul class="space-y-2 mb-4">
-            <?php foreach ($cart as $i => $item): ?>
-                <li class="flex items-center justify-between text-sm border-b border-stone-100 pb-2">
-                    <span>
-                        <?= (int) $item['quantity'] ?>&times; <?= htmlspecialchars($item['product_name'], ENT_QUOTES, 'UTF-8') ?>
-                        <?php if ($item['size_label']): ?> (<?= htmlspecialchars($item['size_label'], ENT_QUOTES, 'UTF-8') ?>)<?php endif; ?>
-                        <?php foreach ($item['addons'] as $a): ?>
-                            + <?= htmlspecialchars($a['addon_label'], ENT_QUOTES, 'UTF-8') ?>
-                        <?php endforeach; ?>
-                        — &#8369;<?= number_format($item['line_total'], 2) ?>
-                    </span>
-                    <form method="post">
-                        <input type="hidden" name="action" value="remove_item">
-                        <input type="hidden" name="conversation_id" value="<?= $conversation_id ?>">
-                        <input type="hidden" name="index" value="<?= $i ?>">
-                        <button type="submit" class="text-red-600 underline">Remove</button>
-                    </form>
-                </li>
-            <?php endforeach; ?>
-            <?php if (empty($cart)): ?>
-                <p class="text-stone-500 text-sm">No items added yet.</p>
-            <?php endif; ?>
-        </ul>
-        <p class="font-semibold">Subtotal: &#8369;<?= number_format($cart_subtotal, 2) ?></p>
+    <!-- Cart -->
+    <div class="rounded-2xl bg-white p-4">
+        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Order so far</p>
+        <?php if (empty($cart)): ?>
+            <p class="text-sm text-stone-400">No items added yet.</p>
+        <?php else: ?>
+            <ul class="space-y-2">
+                <?php foreach ($cart as $i => $item): ?>
+                    <li class="flex items-center justify-between gap-2 border-b border-stone-100 pb-2 text-sm">
+                        <span class="min-w-0 text-stone-700">
+                            <?= (int) $item['quantity'] ?>&times; <?= htmlspecialchars($item['product_name'], ENT_QUOTES, 'UTF-8') ?>
+                            <?php if ($item['size_label']): ?> <span class="text-stone-400">(<?= htmlspecialchars($item['size_label'], ENT_QUOTES, 'UTF-8') ?>)</span><?php endif; ?>
+                            <?php foreach ($item['addons'] as $a): ?>
+                                <span class="text-stone-400">+ <?= htmlspecialchars($a['addon_label'], ENT_QUOTES, 'UTF-8') ?></span>
+                            <?php endforeach; ?>
+                            — <span class="font-semibold">&#8369;<?= number_format($item['line_total'], 2) ?></span>
+                        </span>
+                        <form method="post" class="shrink-0">
+                            <input type="hidden" name="action" value="remove_item">
+                            <input type="hidden" name="conversation_id" value="<?= $conversation_id ?>">
+                            <input type="hidden" name="index" value="<?= $i ?>">
+                            <button type="submit" class="text-xs font-semibold text-red-500">Remove</button>
+                        </form>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+        <p class="mt-2.5 flex justify-between text-sm font-black text-stone-900"><span>Subtotal</span><span>&#8369;<?= number_format($cart_subtotal, 2) ?></span></p>
     </div>
 
-    <div class="bg-white border border-stone-200 rounded-lg p-6">
-        <h2 class="font-semibold mb-3">Finalize</h2>
+    <!-- Finalize -->
+    <div class="rounded-2xl bg-white p-4">
+        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Finalize</p>
         <form method="post" class="space-y-3">
             <input type="hidden" name="action" value="finalize">
             <input type="hidden" name="conversation_id" value="<?= $conversation_id ?>">
             <div>
-                <label class="block text-sm text-stone-600 mb-1">Fulfillment</label>
-                <select name="fulfillment_type" class="w-full border border-stone-300 rounded p-2">
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Fulfillment</label>
+                <select name="fulfillment_type" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
                     <option value="pickup">Pickup</option>
                     <option value="delivery">Delivery</option>
                 </select>
             </div>
             <div>
-                <label class="block text-sm text-stone-600 mb-1">Delivery address (if delivery)</label>
-                <input type="text" name="delivery_address" class="w-full border border-stone-300 rounded p-2">
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Delivery address (if delivery)</label>
+                <input type="text" name="delivery_address" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
             </div>
             <div>
-                <label class="block text-sm text-stone-600 mb-1">Additional charges (&#8369;)</label>
-                <input type="number" step="0.01" name="additional_charges" value="0" class="w-full border border-stone-300 rounded p-2">
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Additional charges (&#8369;)</label>
+                <input type="number" step="0.01" name="additional_charges" value="0" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
             </div>
-            <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Send order card to customer</button>
+            <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Send order card to customer</button>
         </form>
     </div>
 </div>

@@ -25,23 +25,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submitted = true;
 }
 
+$no_shell = true;
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-md mx-auto bg-white border border-stone-200 rounded-lg p-6">
-    <h1 class="text-xl font-bold mb-4">Resend verification email</h1>
+<div class="flex min-h-screen flex-col justify-center px-6">
+    <h1 class="text-center text-xl font-black text-stone-900">Resend verification email</h1>
 
     <?php if ($submitted): ?>
-        <p class="bg-green-50 text-green-700 text-sm rounded p-3 mb-4">
+        <p class="mt-4 rounded-xl bg-green-50 p-3 text-sm text-green-700">
             If that email is registered and not yet verified, a new link is on its way.
         </p>
-        <p class="text-sm"><a href="/auth/login.php" class="text-amber-700 underline">Back to login</a></p>
+        <a href="/auth/login.php" class="mt-4 block w-full rounded-xl bg-accent py-3 text-center text-sm font-bold text-white">Back to login</a>
     <?php else: ?>
-        <form method="post" class="space-y-3">
+        <form method="post" class="mt-5 space-y-3">
             <div>
-                <label class="block text-sm text-stone-600 mb-1">Email</label>
-                <input type="email" name="email" required value="<?= htmlspecialchars($prefill_email, ENT_QUOTES, 'UTF-8') ?>" class="w-full border border-stone-300 rounded p-2">
+                <label class="mb-1 block text-xs font-semibold text-stone-500">Email</label>
+                <input type="email" name="email" required value="<?= htmlspecialchars($prefill_email, ENT_QUOTES, 'UTF-8') ?>" class="w-full rounded-xl border border-stone-200 bg-white p-2.5 text-sm focus:border-coffee focus:outline-none">
             </div>
-            <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Send link</button>
+            <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Send link</button>
         </form>
     <?php endif; ?>
 </div>

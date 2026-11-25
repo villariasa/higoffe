@@ -26,28 +26,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $upload_auth = Uploads::issueToken((int) $_SESSION['user_id'], 'avatar');
 
+$page_title = 'Edit profile';
+$back_url = '/profile/view.php';
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="max-w-md mx-auto bg-white border border-stone-200 rounded-xl p-6">
-    <h1 class="text-xl font-bold mb-4">Edit profile</h1>
 
+<div class="px-4 py-4">
     <?php if ($saved): ?>
-        <p class="bg-green-50 text-green-700 text-sm rounded p-3 mb-4">Saved.</p>
+        <p class="mb-3 rounded-xl bg-green-50 p-3 text-sm text-green-700">Saved.</p>
     <?php endif; ?>
     <?php if ($error !== ''): ?>
-        <p class="bg-red-50 text-red-700 text-sm rounded p-3 mb-4"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+        <p class="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-700"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>
 
-    <form method="post" class="space-y-3">
-        <?php render_image_upload_field($upload_auth, 'avatar_url', 'Profile photo', $user['avatar_url'] ?? ''); ?>
-        <div>
-            <label class="block text-sm text-stone-600 mb-1">Bio</label>
-            <textarea name="bio" rows="3" maxlength="280" class="w-full border border-stone-300 rounded p-2"><?= htmlspecialchars($user['bio'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+    <form method="post" class="space-y-4">
+        <div class="rounded-2xl bg-white p-3.5">
+            <?php render_image_upload_field($upload_auth, 'avatar_url', 'Profile photo', $user['avatar_url'] ?? ''); ?>
         </div>
-        <button type="submit" class="w-full bg-amber-700 text-white rounded p-2 font-semibold">Save</button>
+        <div class="rounded-2xl bg-white p-3.5">
+            <label class="mb-1 block text-xs font-semibold text-stone-500">Bio</label>
+            <textarea name="bio" rows="3" maxlength="280" class="w-full rounded-xl border border-stone-200 bg-cream p-3 text-sm focus:border-coffee focus:outline-none"><?= htmlspecialchars($user['bio'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+        </div>
+        <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Save</button>
     </form>
-
-    <p class="text-sm mt-4"><a href="/profile/view.php" class="text-amber-700 underline">View your profile</a></p>
 </div>
 <script src="/includes/image_upload.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

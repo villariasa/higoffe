@@ -4,6 +4,7 @@ require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/UserFollow.php';
 require_once __DIR__ . '/../models/Post.php';
 require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../includes/components.php';
 
 $profile_user_id = (int) ($_GET['id'] ?? $_SESSION['user_id']);
 $viewer_id = (int) $_SESSION['user_id'];
@@ -25,43 +26,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'toggl
     exit;
 }
 
-$is_following = $profile_user_id !== $viewer_id && $userFollowModel->isFollowing($viewer_id, $profile_user_id);
+$is_own = $profile_user_id === $viewer_id;
+$is_following = !$is_own && $userFollowModel->isFollowing($viewer_id, $profile_user_id);
 $follower_count = $userFollowModel->countFollowers($profile_user_id);
 $following_count = $userFollowModel->countFollowing($profile_user_id);
 
 $postModel = new Post($pdo);
 $posts = $postModel->getFeed($viewer_id, null, $profile_user_id);
 
+if (!$is_own) {
+    $page_title = $profile_user['full_name'];
+    $back_url = '/feed/index.php';
+}
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="bg-white border border-stone-200 rounded-xl p-6 mb-6">
-    <div class="flex items-start justify-between gap-4 flex-wrap">
-        <div class="flex items-center gap-4">
-            <?php if (!empty($profile_user['avatar_url'])): ?>
-                <img src="<?= htmlspecialchars($profile_user['avatar_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="w-16 h-16 rounded-full object-cover border border-stone-200">
-            <?php else: ?>
-                <div class="w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xl">
-                    <?= htmlspecialchars(mb_strtoupper(mb_substr($profile_user['full_name'], 0, 1)), ENT_QUOTES, 'UTF-8') ?>
-                </div>
-            <?php endif; ?>
-            <div>
-                <h1 class="text-xl font-bold"><?= htmlspecialchars($profile_user['full_name'], ENT_QUOTES, 'UTF-8') ?></h1>
-                <?php if (!empty($profile_user['bio'])): ?>
-                    <p class="text-sm text-stone-600 mt-1"><?= nl2br(htmlspecialchars($profile_user['bio'], ENT_QUOTES, 'UTF-8')) ?></p>
-                <?php endif; ?>
-                <p class="text-xs text-stone-400 mt-1">
-                    <span class="font-semibold text-stone-600"><?= $follower_count ?></span> followers
-                    &middot;
-                    <span class="font-semibold text-stone-600"><?= $following_count ?></span> following
-                </p>
+
+<!-- Profile header -->
+<div class="bg-white px-4 pb-4 pt-5">
+    <div class="flex items-center gap-4">
+        <?php render_avatar($profile_user['avatar_url'] ?? null, $profile_user['full_name'], 'w-16 h-16'); ?>
+        <div class="min-w-0 flex-1">
+            <h1 class="truncate text-base font-black text-stone-900"><?= htmlspecialchars($profile_user['full_name'], ENT_QUOTES, 'UTF-8') ?></h1>
+            <div class="mt-1 flex gap-4 text-[13px]">
+                <span><b><?= count($posts) ?></b> <span class="text-stone-500">posts</span></span>
+                <span><b><?= $follower_count ?></b> <span class="text-stone-500">followers</span></span>
+                <span><b><?= $following_count ?></b> <span class="text-stone-500">following</span></span>
             </div>
         </div>
-        <?php if ($profile_user_id === $viewer_id): ?>
-            <a href="/profile/edit.php" class="rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-700 hover:border-amber-600 hover:text-amber-700">Edit profile</a>
+    </div>
+
+    <?php if (!empty($profile_user['bio'])): ?>
+        <p class="mt-2.5 text-[13px] leading-snug text-stone-600"><?= nl2br(htmlspecialchars($profile_user['bio'], ENT_QUOTES, 'UTF-8')) ?></p>
+    <?php endif; ?>
+
+    <div class="mt-3">
+        <?php if ($is_own): ?>
+            <a href="/profile/edit.php" class="block w-full rounded-xl border border-stone-300 py-2 text-center text-sm font-bold text-stone-700 active:bg-stone-50">Edit profile</a>
         <?php else: ?>
             <form method="post">
                 <input type="hidden" name="action" value="toggle_follow">
-                <button type="submit" class="rounded-full <?= $is_following ? 'border border-stone-300 text-stone-700' : 'bg-amber-700 text-white' ?> px-4 py-2 text-xs font-semibold">
+                <button type="submit" class="w-full rounded-xl py-2 text-sm font-bold <?= $is_following ? 'border border-stone-300 text-stone-600' : 'bg-coffee text-white' ?>">
                     <?= $is_following ? 'Following' : 'Follow' ?>
                 </button>
             </form>
@@ -69,19 +73,24 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<h2 class="text-lg font-bold mb-3">Posts</h2>
-<div class="space-y-4 max-w-xl">
-    <?php foreach ($posts as $post): ?>
-        <div class="bg-white border border-stone-200 rounded-xl p-4">
-            <p class="whitespace-pre-wrap"><?= htmlspecialchars($post['caption'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
-            <?php if (!empty($post['image_url'])): ?>
-                <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="w-full max-h-72 object-cover rounded-lg mt-2">
-            <?php endif; ?>
-            <p class="text-xs text-stone-400 mt-2"><?= (int) $post['like_count'] ?> likes &middot; <?= (int) $post['comment_count'] ?> comments</p>
-        </div>
-    <?php endforeach; ?>
+<!-- Posts -->
+<section class="mt-3">
     <?php if (empty($posts)): ?>
-        <p class="text-stone-500 text-sm">No posts yet.</p>
+        <?php render_empty_state('📷', 'No posts yet', $is_own ? 'Share your first café moment from the Post tab.' : ''); ?>
+    <?php else: ?>
+        <div class="space-y-2.5">
+            <?php foreach ($posts as $post): ?>
+                <article class="bg-white px-4 py-3">
+                    <?php if (!empty($post['caption'])): ?>
+                        <p class="whitespace-pre-wrap text-sm text-stone-800"><?= htmlspecialchars($post['caption'], ENT_QUOTES, 'UTF-8') ?></p>
+                    <?php endif; ?>
+                    <?php if (!empty($post['image_url'])): ?>
+                        <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="mt-2 max-h-80 w-full rounded-xl object-cover">
+                    <?php endif; ?>
+                    <p class="mt-2 text-[11px] text-stone-400">&hearts; <?= (int) $post['like_count'] ?> &middot; &#128172; <?= (int) $post['comment_count'] ?></p>
+                </article>
+            <?php endforeach; ?>
+        </div>
     <?php endif; ?>
-</div>
+</section>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
