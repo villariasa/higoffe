@@ -9,7 +9,7 @@ require_once __DIR__ . '/../models/Order.php';
 require_once __DIR__ . '/../models/OrderItem.php';
 require_once __DIR__ . '/../models/Message.php';
 require_once __DIR__ . '/../includes/auth_check.php';
-require_role('seller');
+require_role('customer');
 
 $conversation_id = (int) ($_GET['conversation_id'] ?? $_POST['conversation_id'] ?? 0);
 
@@ -18,12 +18,11 @@ $conversationModel = new Conversation($pdo);
 $conversation = $conversationModel->getById($conversation_id);
 
 $cafeModel = new Cafe($pdo);
-$cafe = $cafeModel->getByOwner((int) $_SESSION['user_id']);
+$cafe = $conversation ? $cafeModel->getById((int) $conversation['cafe_id']) : null;
 
 if (!$conversation || !$cafe
-    || (int) $conversation['cafe_id'] !== (int) $cafe['cafe_id']
-    || (int) $conversation['assigned_seller_user_id'] !== (int) $_SESSION['user_id']) {
-    header("Location: /queue/index.php");
+    || (int) $conversation['customer_user_id'] !== (int) $_SESSION['user_id']) {
+    header("Location: /chat/inbox.php");
     exit;
 }
 
@@ -116,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conversationModel->touchLastMessageAt($conversation_id);
 
             unset($_SESSION['order_draft'][$conversation_id]);
-            header("Location: /chat/conversation.php?id={$conversation_id}");
+            header("Location: /orders/view.php?id={$order_id}");
             exit;
         }
     }
@@ -125,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $cart = $_SESSION['order_draft'][$conversation_id];
 $cart_subtotal = array_sum(array_column($cart, 'line_total'));
 
-$page_title = 'Create order card';
+$page_title = 'Order from ' . $cafe['cafe_name'];
 $back_url = '/chat/conversation.php?id=' . $conversation_id;
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -137,9 +136,8 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Add item -->
     <div class="rounded-2xl bg-white p-4">
-        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Add item</p>
+        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Choose item</p>
         <form method="post" class="space-y-3">
-            <input type="hidden" name="action" value="add_item">
             <input type="hidden" name="conversation_id" value="<?= $conversation_id ?>">
             <select name="product_id" required class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none" onchange="this.form.submit()">
                 <option value="">-- Select product --</option>
@@ -178,11 +176,10 @@ require_once __DIR__ . '/../includes/header.php';
                         </div>
                     </div>
                 <?php endif; ?>
-                <input type="hidden" name="product_id" value="<?= $selected_product_id ?>">
                 <div class="flex items-center gap-3">
                     <label class="text-xs font-semibold text-stone-500">Qty</label>
                     <input type="number" name="quantity" value="1" min="1" class="w-20 rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
-                    <button type="submit" class="ml-auto rounded-full bg-coffee px-4 py-2 text-xs font-bold text-white active:opacity-80">Add to order</button>
+                    <button type="submit" name="action" value="add_item" class="ml-auto rounded-full bg-coffee px-4 py-2 text-xs font-bold text-white active:opacity-80">Add to order</button>
                 </div>
             <?php endif; ?>
         </form>
@@ -233,13 +230,10 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
             <div>
                 <label class="mb-1 block text-xs font-semibold text-stone-500">Delivery address (if delivery)</label>
-                <input type="text" name="delivery_address" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
+                <input type="text" name="delivery_address" placeholder="Street, barangay, landmarks..." class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
             </div>
-            <div>
-                <label class="mb-1 block text-xs font-semibold text-stone-500">Additional charges (&#8369;)</label>
-                <input type="number" step="0.01" name="additional_charges" value="0" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
-            </div>
-            <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Send order card to customer</button>
+            <input type="hidden" name="additional_charges" value="0">
+            <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Place order</button>
         </form>
     </div>
 </div>

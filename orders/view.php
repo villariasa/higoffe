@@ -36,12 +36,6 @@ if (!$is_authorized) {
     exit;
 }
 
-// Customers confirming a Pending order do that on confirm.php, not here.
-if ($role === 'customer' && $order['status_label'] === 'Pending') {
-    header("Location: /orders/confirm.php?id={$order_id}");
-    exit;
-}
-
 $next_statuses = $is_owner_seller ? $orderModel->getAllowedNextStatuses($order['status_label']) : [];
 
 $orderItemModel = new OrderItem($pdo);
@@ -183,6 +177,12 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php endforeach; ?>
             </div>
         </div>
+    <?php elseif ($role === 'customer' && $order['status_label'] === 'Pending'): ?>
+        <form method="post" action="/orders/confirm.php" data-confirm="Cancel this order?">
+            <input type="hidden" name="order_id" value="<?= (int) $order_id ?>">
+            <input type="hidden" name="action" value="cancel">
+            <button type="submit" class="w-full rounded-xl border border-red-300 bg-white py-2.5 text-sm font-bold text-red-500 active:bg-red-50">Cancel order</button>
+        </form>
     <?php endif; ?>
 </div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

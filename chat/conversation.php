@@ -100,8 +100,9 @@ require_once __DIR__ . '/../includes/header.php';
             <p class="truncate text-sm font-bold text-stone-900"><?= htmlspecialchars($other_name, ENT_QUOTES, 'UTF-8') ?></p>
             <p class="text-[10px] uppercase tracking-wide text-stone-400"><?= htmlspecialchars($conversation['status'], ENT_QUOTES, 'UTF-8') ?></p>
         </div>
-        <?php if ($role === 'seller' && $conversation['status'] === 'active'): ?>
+        <?php if ($role === 'customer'): ?>
             <a href="/orders/create_order_card.php?conversation_id=<?= $conversation_id ?>" class="shrink-0 rounded-full bg-accent px-3 py-1.5 text-[11px] font-bold text-white">+ Order</a>
+        <?php elseif ($role === 'seller' && $conversation['status'] === 'active'): ?>
             <form method="post" data-confirm="Mark this inquiry resolved?" class="shrink-0">
                 <input type="hidden" name="action" value="resolve">
                 <button type="submit" class="px-2 text-[11px] font-semibold text-stone-400">Resolve</button>
