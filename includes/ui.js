@@ -38,40 +38,77 @@ window.higoffeToast = function (message, type) {
     }, 3200);
 };
 
-// ---- Two-tap confirm (replaces confirm()) -----------------------------
-// Usage: <form data-confirm="Delete this product?"> — the first submit is
-// held and the button becomes "Tap again to confirm"; a second submit
-// within 4s goes through. No modal, no dialog.
-document.addEventListener('submit', function (e) {
-    const form = e.target;
-    if (!(form instanceof HTMLFormElement)) return;
-    const message = form.dataset.confirm;
-    if (!message) return;
+// ---- Confirmation modal (replaces confirm()) ---------------------------
+// Usage: <form data-confirm="Delete this product?"> — submit is held and a
+// custom in-page modal (not the browser's native confirm()) asks the user
+// to confirm or cancel; confirming re-submits the same form.
+(function () {
+    let overlay = null;
 
-    if (form.dataset.confirmArmed === '1') {
-        delete form.dataset.confirmArmed;
-        return; // second tap — let it submit
+    function buildOverlay() {
+        overlay = document.createElement('div');
+        overlay.id = 'higoffe-confirm-overlay';
+        overlay.className = 'fixed inset-0 z-[110] hidden items-center justify-center bg-stone-900/50 p-4';
+        overlay.innerHTML =
+            '<div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl" role="alertdialog" aria-modal="true">' +
+            '  <div class="flex items-start gap-3">' +
+            '    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500">' +
+            '      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 4.5c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>' +
+            '    </div>' +
+            '    <p id="higoffe-confirm-message" class="mt-1.5 flex-1 text-sm font-semibold text-stone-800"></p>' +
+            '  </div>' +
+            '  <div class="mt-5 flex justify-end gap-2">' +
+            '    <button type="button" id="higoffe-confirm-cancel" class="rounded-xl px-4 py-2 text-sm font-bold text-stone-500 hover:bg-stone-100">Cancel</button>' +
+            '    <button type="button" id="higoffe-confirm-ok" class="rounded-xl bg-red-500 px-4 py-2 text-sm font-bold text-white hover:bg-red-600">Confirm</button>' +
+            '  </div>' +
+            '</div>';
+        document.body.appendChild(overlay);
     }
 
-    e.preventDefault();
-    form.dataset.confirmArmed = '1';
-    window.higoffeToast(message + ' Tap again to confirm.');
-
-    const btn = form.querySelector('button[type="submit"], button:not([type])');
-    let original = null;
-    if (btn) {
-        original = btn.innerHTML;
-        btn.textContent = 'Tap again to confirm';
-        btn.classList.add('ring-2', 'ring-red-400');
+    function closeModal() {
+        overlay.classList.add('hidden');
+        overlay.classList.remove('flex');
     }
-    setTimeout(function () {
-        delete form.dataset.confirmArmed;
-        if (btn && original !== null) {
-            btn.innerHTML = original;
-            btn.classList.remove('ring-2', 'ring-red-400');
+
+    function askConfirm(message, onConfirm) {
+        if (!overlay) buildOverlay();
+        overlay.querySelector('#higoffe-confirm-message').textContent = message;
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+
+        const okBtn = overlay.querySelector('#higoffe-confirm-ok');
+        const cancelBtn = overlay.querySelector('#higoffe-confirm-cancel');
+
+        function cleanup() {
+            okBtn.removeEventListener('click', onOk);
+            cancelBtn.removeEventListener('click', onCancel);
+            overlay.removeEventListener('click', onBackdrop);
+            document.removeEventListener('keydown', onKey);
         }
-    }, 4000);
-}, true);
+        function onOk() { cleanup(); closeModal(); onConfirm(); }
+        function onCancel() { cleanup(); closeModal(); }
+        function onBackdrop(e) { if (e.target === overlay) onCancel(); }
+        function onKey(e) { if (e.key === 'Escape') onCancel(); }
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKey);
+    }
+
+    document.addEventListener('submit', function (e) {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        const message = form.dataset.confirm;
+        if (!message || form.dataset.confirmArmed === '1') return;
+
+        e.preventDefault();
+        askConfirm(message, function () {
+            form.dataset.confirmArmed = '1';
+            form.requestSubmit ? form.requestSubmit() : form.submit();
+        });
+    }, true);
+})();
 
 // ---- Inline report-reason (replaces window.prompt) --------------------
 // Usage: <form class="report-form"> with a hidden input.reason-input.
