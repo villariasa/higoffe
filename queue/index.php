@@ -16,10 +16,15 @@ if (!$cafe) {
     exit;
 }
 
+// is_array(...) ?: [] guards, not (array) casts — (array) false would
+// wrap it into a 1-element [false] array instead of an empty list.
 $conversationModel = new Conversation($pdo);
-$waiting = $conversationModel->getWaitingQueue((int) $cafe['cafe_id']);
-$active = $conversationModel->getActiveForSeller((int) $_SESSION['user_id']);
-$resolved = $conversationModel->getResolvedForCafe((int) $cafe['cafe_id']);
+$waiting_raw = $conversationModel->getWaitingQueue((int) $cafe['cafe_id']);
+$waiting = is_array($waiting_raw) ? $waiting_raw : [];
+$active_raw = $conversationModel->getActiveForSeller((int) $_SESSION['user_id']);
+$active = is_array($active_raw) ? $active_raw : [];
+$resolved_raw = $conversationModel->getResolvedForCafe((int) $cafe['cafe_id']);
+$resolved = is_array($resolved_raw) ? $resolved_raw : [];
 
 $orderModel = new Order($pdo);
 $order_summary = [];
