@@ -17,9 +17,12 @@ if (!headers_sent()) {
     if ($csp_worker) {
         $csp_host = (string)(parse_url($csp_worker, PHP_URL_HOST) ?? '');
     }
-    $img_src   = "img-src 'self' data:" . ($csp_host ? " https://{$csp_host}" : '');
-    $conn_src  = "connect-src 'self'" . ($csp_host ? " https://{$csp_host}" : '');
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; {$img_src}; {$conn_src}; frame-ancestors 'none';");
+    $img_src  = "img-src 'self' data:" . ($csp_host ? " https://{$csp_host}" : '');
+    $conn_src = "connect-src 'self'" . ($csp_host ? " https://{$csp_host}" : '');
+    // CDNs the app bundles: Tailwind play CDN, NProgress, Turbo Drive.
+    $script_cdns = "https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net";
+    $style_cdns  = "https://cdnjs.cloudflare.com https://fonts.googleapis.com";
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' {$script_cdns}; script-src-elem 'self' 'unsafe-inline' {$script_cdns}; style-src 'self' 'unsafe-inline' {$style_cdns}; style-src-elem 'self' 'unsafe-inline' {$style_cdns}; font-src 'self' https://fonts.gstatic.com; {$img_src}; {$conn_src}; frame-ancestors 'none';");
 }
 
 $media_host = Uploads::publicHost();
