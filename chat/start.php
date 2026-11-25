@@ -2,6 +2,8 @@
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/Conversation.php';
 require_once __DIR__ . '/../models/Message.php';
+require_once __DIR__ . '/../models/Cafe.php';
+require_once __DIR__ . '/../models/Notification.php';
 require_once __DIR__ . '/../includes/auth_check.php';
 require_role('customer');
 
@@ -17,6 +19,14 @@ $conversation_id = $conversationModel->startOrReuse((int) $_SESSION['user_id'], 
 $messageModel = new Message($pdo);
 if ($messageModel->countForConversation($conversation_id) === 0) {
     $messageModel->createSystem($conversation_id, (int) $_SESSION['user_id'], "Thanks for reaching out! A barista will be with you shortly.");
+
+    // Nothing else pings the seller that a new inquiry landed in their
+    // waiting queue — without this they'd only find out by sitting on
+    // /queue/index.php watching its live counter.
+    $cafe = (new Cafe($pdo))->getById($cafe_id);
+    if ($cafe) {
+        (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' sent a new inquiry — check your queue to reply.');
+    }
 }
 
 header("Location: /chat/conversation.php?id={$conversation_id}");

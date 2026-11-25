@@ -33,6 +33,14 @@ class Database {
             $pdo = new PDO($dsn, $user, $password);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            // Supabase's Transaction Pooler (PgBouncer) hands out a
+            // different backend connection per transaction, so a
+            // server-side PREPARE from one request can vanish before the
+            // next statement runs on it — "prepared statement ... does
+            // not exist" (SQLSTATE 26000). Emulated prepares build the
+            // query client-side instead of using real PREPARE, which
+            // sidesteps that entirely and is required when pooling.
+            $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
             return $pdo;
         } catch (PDOException $e) {
             die("Database Connection Error: " . $e->getMessage());
