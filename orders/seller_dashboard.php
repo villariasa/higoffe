@@ -16,7 +16,7 @@ if (!$cafe) {
 }
 
 $orderModel = new Order($pdo);
-$statuses = ['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup', 'Out for Delivery'];
+$statuses = ['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup', 'Out for Delivery', 'Completed', 'Cancelled'];
 $active_status = in_array($_GET['status'] ?? '', $statuses, true) ? $_GET['status'] : 'Pending';
 $orders = $orderModel->getForSellerByStatus((int) $cafe['cafe_id'], $active_status);
 
@@ -54,6 +54,8 @@ require_once __DIR__ . '/../includes/header.php';
                             <p class="text-[10px] font-bold text-green-600">PAID</p>
                         <?php elseif (($order['payment_status'] ?? '') === 'proof_submitted'): ?>
                             <p class="text-[10px] font-bold text-amber-600">CHECK PROOF</p>
+                        <?php elseif ($active_status !== 'Cancelled'): ?>
+                            <p class="text-[10px] font-bold text-red-500">UNPAID</p>
                         <?php endif; ?>
                     </div>
                 </a>

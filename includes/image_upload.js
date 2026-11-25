@@ -4,10 +4,14 @@ document.querySelectorAll('.image-upload-field').forEach(function (field) {
     const preview = field.querySelector('.preview-img');
     const status = field.querySelector('.status-text');
 
+    const formEl = field.closest('form');
+    const submitBtn = formEl ? formEl.querySelector('button[type="submit"], input[type="submit"]') : null;
+
     fileInput.addEventListener('change', async function () {
         const rawFile = fileInput.files[0];
         if (!rawFile) return;
 
+        if (submitBtn) submitBtn.disabled = true;
         status.textContent = 'Optimizing & uploading...';
         const file = window.higoffeOptimizeImage
             ? await window.higoffeOptimizeImage(rawFile)
@@ -18,6 +22,7 @@ document.querySelectorAll('.image-upload-field').forEach(function (field) {
         if (file.size > maxMb * 1024 * 1024) {
             status.textContent = 'File too large — max ' + maxMb + 'MB for this photo.';
             fileInput.value = '';
+            if (submitBtn) submitBtn.disabled = false;
             return;
         }
 
@@ -41,6 +46,8 @@ document.querySelectorAll('.image-upload-field').forEach(function (field) {
             }
         } catch (err) {
             status.textContent = 'Upload failed — check your connection.';
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
         }
     });
 });

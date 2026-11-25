@@ -1,10 +1,12 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../config/Uploads.php';
 require_once __DIR__ . '/../models/Cafe.php';
 require_once __DIR__ . '/../models/Order.php';
 require_once __DIR__ . '/../models/OrderItem.php';
 require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../includes/components.php';
+require_once __DIR__ . '/../includes/image_upload_field.php';
 
 $order_id = (int) ($_GET['id'] ?? 0);
 
@@ -49,8 +51,15 @@ $items = $orderItemModel->getForOrder($order_id);
 $timeline = $order['fulfillment_type'] === 'delivery'
     ? ['Pending', 'Confirmed', 'Preparing', 'Out for Delivery', 'Completed']
     : ['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup', 'Completed'];
+$short_labels = $order['fulfillment_type'] === 'delivery'
+    ? ['Pending', 'Confirmed', 'Preparing', 'Delivery', 'Done']
+    : ['Pending', 'Confirmed', 'Preparing', 'Ready', 'Done'];
 $current_step = array_search($order['status_label'], $timeline, true);
 $is_cancelled = $order['status_label'] === 'Cancelled';
+
+$upload_auth = ($role === 'customer' && $order['payment_status'] === 'unpaid')
+    ? Uploads::issueToken($user_id, 'payment_proof')
+    : null;
 
 $page_title = 'Order #' . $order_id;
 $back_url = $role === 'customer' ? '/orders/customer_history.php' : '/orders/seller_dashboard.php';
@@ -59,12 +68,34 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="space-y-3 px-4 py-4 lg:mx-auto lg:max-w-xl lg:px-0">
 
+    <!-- Quick header + Chat link -->
+    <div class="flex items-center justify-between rounded-2xl bg-white p-3.5">
+        <div class="min-w-0">
+            <p class="text-xs font-bold text-stone-900">
+                <?= $is_owner_seller ? htmlspecialchars($order['customer_name'] ?? 'Customer', ENT_QUOTES, 'UTF-8') : htmlspecialchars($order['cafe_name'] ?? 'Café', ENT_QUOTES, 'UTF-8') ?>
+            </p>
+            <p class="text-[11px] text-stone-400">
+                Payment:
+                <?php if ($order['payment_status'] === 'confirmed'): ?>
+                    <span class="font-bold text-green-600">Confirmed</span>
+                <?php elseif ($order['payment_status'] === 'proof_submitted'): ?>
+                    <span class="font-bold text-amber-600">Proof submitted</span>
+                <?php else: ?>
+                    <span class="font-bold text-red-500">Unpaid</span>
+                <?php endif; ?>
+            </p>
+        </div>
+        <a href="/chat/conversation.php?id=<?= (int) $order['conversation_id'] ?>" class="inline-flex items-center gap-1.5 rounded-full border border-stone-200 px-3.5 py-1.5 text-xs font-bold text-stone-700 hover:border-accent hover:text-accent">
+            <?php icon('chat-bubble', 'w-3.5 h-3.5'); ?> Open chat
+        </a>
+    </div>
+
     <!-- Status timeline -->
     <div class="rounded-2xl bg-white p-4">
         <?php if ($is_cancelled): ?>
             <p class="text-center text-sm font-bold text-red-500">This order was cancelled.</p>
         <?php else: ?>
-            <div class="flex items-center">
+            <div class="flex items-start">
                 <?php foreach ($timeline as $i => $step): ?>
                     <?php $done = $current_step !== false && $i <= $current_step; ?>
                     <div class="flex flex-col items-center <?= $i > 0 ? 'flex-1' : '' ?>">
@@ -76,6 +107,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <?php if ($done): ?><?php icon('check', 'w-3 h-3'); ?><?php else: ?><?= $i + 1 ?><?php endif; ?>
                             </span>
                         </div>
+                        <span class="mt-1 text-[9px] font-semibold <?= $done ? 'text-stone-800' : 'text-stone-400' ?>"><?= htmlspecialchars($short_labels[$i], ENT_QUOTES, 'UTF-8') ?></span>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -106,8 +138,13 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="rounded-2xl bg-white p-4">
         <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Payment</p>
         <?php if ($order['payment_status'] === 'unpaid'): ?>
-            <?php if ($role === 'customer'): ?>
-                <a href="/orders/submit_payment.php?id=<?= (int) $order_id ?>" class="block w-full rounded-xl bg-coffee py-2.5 text-center text-sm font-bold text-white active:opacity-80">Submit payment proof</a>
+            <?php if ($role === 'customer' && $upload_auth): ?>
+                <form method="post" action="/orders/submit_payment.php" class="space-y-3">
+                    <input type="hidden" name="order_id" value="<?= (int) $order_id ?>">
+                    <?php render_image_upload_field($upload_auth, 'proof_url', 'Upload payment screenshot (GCash / bank transfer)', ''); ?>
+                    <button type="submit" class="w-full rounded-xl bg-accent py-2.5 text-sm font-bold text-white active:opacity-80 disabled:opacity-50">Submit payment proof</button>
+                </form>
+                <script src="/includes/image_upload.js"></script>
             <?php else: ?>
                 <p class="text-sm text-stone-500">Waiting for the customer to submit payment proof.</p>
             <?php endif; ?>

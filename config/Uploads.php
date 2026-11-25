@@ -29,7 +29,14 @@ class Uploads {
     // Worker. Optional: if unset, isAllowedMediaUrl() still blocks
     // dangerous schemes but won't pin the host.
     public static function publicHost(): string {
-        return self::resolve('UPLOAD_PUBLIC_HOST', 'UPLOAD_PUBLIC_HOST');
+        $raw = trim(self::resolve('UPLOAD_PUBLIC_HOST', 'UPLOAD_PUBLIC_HOST'));
+        if ($raw === '') {
+            return '';
+        }
+        if (str_contains($raw, '://')) {
+            return (string) (parse_url($raw, PHP_URL_HOST) ?? '');
+        }
+        return rtrim(explode('/', $raw, 2)[0], '/');
     }
 
     // Every endpoint that stores a client-submitted URL into a DB image
@@ -50,8 +57,16 @@ class Uploads {
         if (!in_array(strtolower($parts['scheme']), ['http', 'https'], true)) {
             return false;
         }
-        $pinned_host = self::publicHost();
-        if ($pinned_host !== '' && strcasecmp($parts['host'], $pinned_host) !== 0) {
+        $allowed_hosts = array_filter([
+            self::publicHost(),
+            (string) (parse_url(self::workerUrl(), PHP_URL_HOST) ?? ''),
+        ]);
+        if (!empty($allowed_hosts)) {
+            foreach ($allowed_hosts as $host) {
+                if (strcasecmp($parts['host'], $host) === 0) {
+                    return true;
+                }
+            }
             return false;
         }
         return true;

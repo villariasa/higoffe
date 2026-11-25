@@ -36,6 +36,13 @@ require_once __DIR__ . '/../includes/header.php';
                         ][$order['status_label']] ?? 'bg-stone-100 text-stone-500';
                         ?>
                         <span class="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase <?= $pill ?>"><?= htmlspecialchars($order['status_label'], ENT_QUOTES, 'UTF-8') ?></span>
+                        <?php if (($order['payment_status'] ?? 'unpaid') === 'confirmed'): ?>
+                            <p class="mt-0.5 text-[10px] font-bold text-green-600">PAID</p>
+                        <?php elseif (($order['payment_status'] ?? '') === 'proof_submitted'): ?>
+                            <p class="mt-0.5 text-[10px] font-bold text-amber-600">PROOF SENT</p>
+                        <?php elseif ($order['status_label'] !== 'Cancelled'): ?>
+                            <p class="mt-0.5 text-[10px] font-bold text-red-500">UNPAID</p>
+                        <?php endif; ?>
                     </div>
                 </a>
             <?php endforeach; ?>
