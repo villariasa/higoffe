@@ -22,22 +22,26 @@ class Mailer {
     private string $encryption; // 'tls' or 'ssl'
     private string $resend_api_key;
     private string $brevo_api_key;
+    private string $gas_webhook_url;
+    private string $gas_webhook_secret;
 
     public function __construct(?PDO $pdo = null) {
-        $host = $port = $username = $password = $from_email = $from_name = $encryption = $resend_api_key = $brevo_api_key = null;
+        $host = $port = $username = $password = $from_email = $from_name = $encryption = $resend_api_key = $brevo_api_key = $gas_webhook_url = $gas_webhook_secret = null;
 
         if ($pdo) {
             require_once __DIR__ . '/../models/Settings.php';
             $settings = new Settings($pdo);
-            $host           = $settings->get('smtp_host');
-            $port           = $settings->get('smtp_port');
-            $username       = $settings->get('smtp_username');
-            $password       = $settings->get('smtp_password');
-            $from_email     = $settings->get('smtp_from_email');
-            $from_name      = $settings->get('smtp_from_name');
-            $encryption     = $settings->get('smtp_encryption');
-            $resend_api_key = $settings->get('resend_api_key');
-            $brevo_api_key  = $settings->get('brevo_api_key');
+            $host               = $settings->get('smtp_host');
+            $port               = $settings->get('smtp_port');
+            $username           = $settings->get('smtp_username');
+            $password           = $settings->get('smtp_password');
+            $from_email         = $settings->get('smtp_from_email');
+            $from_name          = $settings->get('smtp_from_name');
+            $encryption         = $settings->get('smtp_encryption');
+            $resend_api_key     = $settings->get('resend_api_key');
+            $brevo_api_key      = $settings->get('brevo_api_key');
+            $gas_webhook_url    = $settings->get('gas_webhook_url');
+            $gas_webhook_secret = $settings->get('gas_webhook_secret');
         }
 
         if (!$host || !$port || !$username || !$password || !$from_email) {
@@ -49,12 +53,10 @@ class Mailer {
             $from_name  = $from_name ?: getenv('SMTP_FROM_NAME');
             $encryption = $encryption ?: getenv('SMTP_ENCRYPTION');
         }
-        if (!$resend_api_key) {
-            $resend_api_key = getenv('RESEND_API_KEY') ?: null;
-        }
-        if (!$brevo_api_key) {
-            $brevo_api_key = getenv('BREVO_API_KEY') ?: null;
-        }
+        if (!$resend_api_key)     $resend_api_key     = getenv('RESEND_API_KEY') ?: null;
+        if (!$brevo_api_key)      $brevo_api_key      = getenv('BREVO_API_KEY') ?: null;
+        if (!$gas_webhook_url)    $gas_webhook_url    = getenv('GAS_WEBHOOK_URL') ?: null;
+        if (!$gas_webhook_secret) $gas_webhook_secret = getenv('GAS_WEBHOOK_SECRET') ?: null;
 
         if (!$host || !$port || !$username || !$password || !$from_email || !$resend_api_key || !$brevo_api_key) {
             $credentials_file = __DIR__ . '/smtp_credentials.php';
@@ -72,20 +74,25 @@ class Mailer {
             }
         }
 
-        $this->host           = (string) $host;
-        $this->port           = (int) $port;
-        $this->username       = (string) $username;
-        $this->password       = (string) $password;
-        $this->from_email     = (string) $from_email;
-        $this->from_name      = (string) ($from_name ?: 'Higoffe');
-        $this->encryption     = (string) ($encryption ?: 'tls');
-        $this->resend_api_key = (string) $resend_api_key;
-        $this->brevo_api_key  = (string) $brevo_api_key;
+        $this->host               = (string) $host;
+        $this->port               = (int) $port;
+        $this->username           = (string) $username;
+        $this->password           = (string) $password;
+        $this->from_email         = (string) $from_email;
+        $this->from_name          = (string) ($from_name ?: 'Higoffe');
+        $this->encryption         = (string) ($encryption ?: 'tls');
+        $this->resend_api_key     = (string) $resend_api_key;
+        $this->brevo_api_key      = (string) $brevo_api_key;
+        $this->gas_webhook_url    = (string) $gas_webhook_url;
+        $this->gas_webhook_secret = (string) $gas_webhook_secret;
     }
 
     public function send(string $to_email, string $subject, string $html_body): bool {
         // Prefer HTTPS APIs when configured — Render free tier blocks
         // outbound SMTP ports (25/465/587), whereas HTTPS (443) always works.
+        if ($this->gas_webhook_url !== '') {
+            return $this->sendViaGasWebhook($to_email, $subject, $html_body);
+        }
         if ($this->brevo_api_key !== '') {
             return $this->sendViaBrevo($to_email, $subject, $html_body);
         }
@@ -146,6 +153,22 @@ class Mailer {
         }
     }
 
+    private function sendViaGasWebhook(string $to_email, string $subject, string $html_body): bool {
+        $payload = json_encode([
+            'secret'    => $this->gas_webhook_secret,
+            'to'        => $to_email,
+            'subject'   => $subject,
+            'html'      => $html_body,
+            'from_name' => $this->from_name,
+        ]);
+        return $this->postJson(
+            $this->gas_webhook_url,
+            ['Content-Type: application/json'],
+            $payload,
+            'GoogleAppsScript'
+        );
+    }
+
     private function sendViaBrevo(string $to_email, string $subject, string $html_body): bool {
         $from_email = $this->from_email ?: $this->username;
         $payload = json_encode([
@@ -189,6 +212,7 @@ class Mailer {
             $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_POST           => true,
+                CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT        => 15,
                 CURLOPT_HTTPHEADER     => $headers,

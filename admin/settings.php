@@ -12,6 +12,9 @@ $error = '';
 $saved = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $gas_webhook_url    = (string) trim($_POST['gas_webhook_url'] ?? '');
+    $gas_webhook_secret = (string) trim($_POST['gas_webhook_secret'] ?? '');
+    $clear_gas          = isset($_POST['clear_gas']);
     $brevo_api_key   = (string) trim($_POST['brevo_api_key'] ?? '');
     $clear_brevo     = isset($_POST['clear_brevo_key']);
     $resend_api_key  = (string) trim($_POST['resend_api_key'] ?? '');
@@ -24,12 +27,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $smtp_from_name  = (string) trim($_POST['smtp_from_name'] ?? '');
     $smtp_encryption = ($_POST['smtp_encryption'] ?? '') === 'ssl' ? 'ssl' : 'tls';
 
+    $existing_gas    = (string) ($settingsModel->get('gas_webhook_url') ?? '');
     $existing_brevo  = (string) ($settingsModel->get('brevo_api_key') ?? '');
     $existing_resend = (string) ($settingsModel->get('resend_api_key') ?? '');
-    $has_brevo  = !$clear_brevo  && ($brevo_api_key !== ''  || $existing_brevo !== '');
-    $has_resend = !$clear_resend && ($resend_api_key !== '' || $existing_resend !== '');
+    $has_gas    = !$clear_gas    && ($gas_webhook_url !== '' || $existing_gas !== '');
+    $has_brevo  = !$clear_brevo  && ($brevo_api_key !== ''   || $existing_brevo !== '');
+    $has_resend = !$clear_resend && ($resend_api_key !== ''  || $existing_resend !== '');
 
-    if ($has_brevo || $has_resend) {
+    if ($has_gas || $has_brevo || $has_resend) {
+        if ($clear_gas) {
+            $settingsModel->set('gas_webhook_url', '');
+            $settingsModel->set('gas_webhook_secret', '');
+        } else {
+            if ($gas_webhook_url !== '')    $settingsModel->set('gas_webhook_url', $gas_webhook_url);
+            if ($gas_webhook_secret !== '') $settingsModel->set('gas_webhook_secret', $gas_webhook_secret);
+        }
         if ($clear_brevo) {
             $settingsModel->set('brevo_api_key', '');
         } elseif ($brevo_api_key !== '') {
@@ -49,8 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $settingsModel->set('smtp_encryption', $smtp_encryption);
         $saved = true;
     } elseif ($smtp_host === '' || $smtp_port === '' || $smtp_username === '' || $smtp_from_email === '') {
-        $error = 'Enter a Brevo/Resend API key, or fill in SMTP host, port, username, and from-email.';
+        $error = 'Enter a Gmail Apps Script URL, Brevo/Resend API key, or fill in SMTP fields.';
     } else {
+        if ($clear_gas) {
+            $settingsModel->set('gas_webhook_url', '');
+            $settingsModel->set('gas_webhook_secret', '');
+        }
         if ($clear_brevo)  $settingsModel->set('brevo_api_key', '');
         if ($clear_resend) $settingsModel->set('resend_api_key', '');
         $settingsModel->set('smtp_host', $smtp_host);
@@ -87,6 +103,32 @@ require_once __DIR__ . '/../includes/header.php';
     <?php endif; ?>
 
     <form method="post" class="space-y-4">
+        <!-- Google Apps Script (sends from your Gmail over HTTPS — zero SMS, zero domain) -->
+        <div class="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5 space-y-2.5">
+            <label class="block text-[11px] font-bold uppercase tracking-wide text-blue-800">
+                Gmail Apps Script Webhook URL (Easiest — uses your Gmail, no SMS/domain)
+                <?php if (!empty($current['gas_webhook_url'])): ?>
+                    <span class="font-normal normal-case text-green-700">— Active ✅</span>
+                <?php endif; ?>
+            </label>
+            <input type="url" name="gas_webhook_url" value="<?= htmlspecialchars($current['gas_webhook_url'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="https://script.google.com/macros/s/...../exec" class="<?= $field ?>">
+            <div>
+                <label class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-blue-800">
+                    Webhook Secret
+                    <?php if (!empty($current['gas_webhook_secret'])): ?>
+                        <span class="font-normal normal-case text-stone-500">(already set — leave blank to keep)</span>
+                    <?php endif; ?>
+                </label>
+                <input type="password" name="gas_webhook_secret" placeholder="<?= !empty($current['gas_webhook_secret']) ? '••••••••' : 'any-random-secret-you-choose' ?>" class="<?= $field ?>">
+            </div>
+            <?php if (!empty($current['gas_webhook_url'])): ?>
+                <label class="flex items-center gap-1.5 text-[11px] text-red-600 cursor-pointer">
+                    <input type="checkbox" name="clear_gas" value="1" class="accent-red-600">
+                    Clear Gmail Apps Script webhook
+                </label>
+            <?php endif; ?>
+        </div>
+
         <!-- Brevo HTTP API (recommended when using Gmail without a custom domain) -->
         <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 space-y-2">
             <label class="block text-[11px] font-bold uppercase tracking-wide text-emerald-800">

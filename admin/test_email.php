@@ -44,10 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Also show current resolved config (passwords redacted).
 require_once __DIR__ . '/../models/Settings.php';
 $settings = new Settings($pdo);
+$has_gas    = (bool) ($settings->get('gas_webhook_url') ?: getenv('GAS_WEBHOOK_URL'));
 $has_brevo  = (bool) ($settings->get('brevo_api_key') ?: getenv('BREVO_API_KEY'));
 $has_resend = (bool) ($settings->get('resend_api_key') ?: getenv('RESEND_API_KEY'));
 $config = [
-    'transport'       => $has_brevo ? 'Brevo HTTPS API ✅' : ($has_resend ? 'Resend HTTPS API ✅' : 'SMTP (ports 587/465 blocked on Render free tier)'),
+    'transport'       => $has_gas ? 'Google Apps Script (Gmail) ✅' : ($has_brevo ? 'Brevo HTTPS API ✅' : ($has_resend ? 'Resend HTTPS API ✅' : 'SMTP (ports 587/465 blocked on Render free tier)')),
+    'gas_webhook_url' => $settings->get('gas_webhook_url') ?: getenv('GAS_WEBHOOK_URL') ?: '(not set)',
     'brevo_api_key'   => $settings->get('brevo_api_key') ? '•••••••• (DB)' : (getenv('BREVO_API_KEY') ? '•••••••• (env)' : '(not set)'),
     'resend_api_key'  => $settings->get('resend_api_key') ? '•••••••• (DB)' : (getenv('RESEND_API_KEY') ? '•••••••• (env)' : '(not set)'),
     'smtp_host'       => $settings->get('smtp_host') ?: getenv('SMTP_HOST') ?: '(not set)',
