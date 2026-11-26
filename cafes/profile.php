@@ -161,4 +161,14 @@ document.getElementById('btn-use-location')?.addEventListener('click', function 
     });
 });
 </script>
+<script>
+if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
+    window.HigoffeTour.run('cafe_profile', [
+        { selector: '#input-city', title: 'Pin your location', description: 'Type your city or area — no need to look up coordinates yourself.' },
+        { selector: '#btn-geocode', title: 'Find it', description: 'We look it up and drop a pin automatically, so your data stays accurate.' },
+        { selector: '#map-preview-wrap', title: 'Confirm on the map', description: "Check the pin landed in the right spot before saving." },
+        { selector: '.image-upload-field', title: 'Logo & cover photo', description: 'Add photos so customers recognize your café in the feed and on maps.' }
+    ]);
+}
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

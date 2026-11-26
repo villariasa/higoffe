@@ -78,7 +78,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <!-- Popular or Nearby cafés (mobile row — desktop uses the rail card) -->
 <?php if (!empty($display_cafes)): ?>
-    <section class="mt-5 lg:hidden">
+    <section id="feed-cafe-rail" class="mt-5 lg:hidden">
         <?php render_section_header($is_nearby ? 'Cafés near you' : 'Popular cafés', '/cafes/discover.php'); ?>
         <div class="no-scrollbar flex gap-3 overflow-x-auto px-4">
             <?php foreach ($display_cafes as $cafe): ?>
@@ -90,7 +90,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <!-- Trending drinks (mobile row — desktop uses the rail card) -->
 <?php if (!empty($trending)): ?>
-    <section class="mt-5 lg:hidden">
+    <section id="feed-trending-rail" class="mt-5 lg:hidden">
         <?php render_section_header('Trending drinks'); ?>
         <div class="no-scrollbar flex gap-3 overflow-x-auto px-4">
             <?php foreach ($trending as $product): ?>
@@ -366,4 +366,17 @@ document.querySelectorAll('.comment-form').forEach(function (form) {
 });
 </script>
 <script src="/includes/location.js"></script>
+<script>
+// Feed feature tour — only after the app-wide "shell" tour has run, so the
+// two don't pop up stacked on top of each other on a brand-new account.
+if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
+    window.HigoffeTour.run('feed', [
+        { selector: '#feed-cafe-rail', title: 'Cafés', description: 'Browse cafés near you, or the most popular ones.' },
+        { selector: '#feed-trending-rail', title: 'Trending drinks', description: 'The most-ordered drinks across all cafés right now.' },
+        { selector: '.like-btn', title: 'Like a post', description: 'Tap the heart to like a café moment.' },
+        { selector: '.comment-toggle', title: 'Comment', description: 'Reply to a post — the author gets notified.' },
+        { selector: '.share-btn', title: 'Share', description: 'Copy a direct link to this post.' }
+    ]);
+}
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

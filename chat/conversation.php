@@ -335,4 +335,18 @@ require_once __DIR__ . '/../includes/header.php';
     const pollTimer = setInterval(poll, 3000);
 })();
 </script>
+<script>
+if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
+    var chatSteps = [];
+    <?php if ($role === 'seller'): ?>
+    chatSteps.push({ selector: '.quick-reply', title: 'Quick replies', description: 'Common responses, one tap — no retyping the same answers all day.' });
+    <?php else: ?>
+    chatSteps.push({ selector: 'a[href^="/orders/create_order_card.php"]', title: 'Start an order', description: 'Turn this conversation into an order once you know what to get.' });
+    <?php endif; ?>
+    chatSteps.push({ selector: '#body-input', title: 'Message', description: 'Type here — the other side sees a live "typing..." indicator.' });
+    chatSteps.push({ selector: 'label[title="Send a photo"]', title: 'Send a photo', description: 'Share a picture — handy for payment proof or a specific drink.' });
+    chatSteps.push({ selector: '#message-list', title: 'Read receipts', description: '"Seen" appears under your message once the other side has read it.' });
+    window.HigoffeTour.run('chat', chatSteps);
+}
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

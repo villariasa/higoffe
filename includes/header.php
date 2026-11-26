@@ -21,7 +21,7 @@ if (!headers_sent()) {
     $conn_src = "connect-src 'self'" . ($csp_host ? " https://{$csp_host}" : '');
     // CDNs the app bundles: Tailwind play CDN, NProgress, Turbo Drive.
     $script_cdns = "https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net";
-    $style_cdns  = "https://cdnjs.cloudflare.com https://fonts.googleapis.com";
+    $style_cdns  = "https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net";
     header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' {$script_cdns}; script-src-elem 'self' 'unsafe-inline' {$script_cdns}; style-src 'self' 'unsafe-inline' {$style_cdns}; style-src-elem 'self' 'unsafe-inline' {$style_cdns}; font-src 'self' https://fonts.gstatic.com; {$img_src}; {$conn_src}; frame-ancestors 'none';");
 }
 
@@ -43,21 +43,21 @@ $is_app_user = $current_role === 'customer' || $current_role === 'seller';
 // Desktop navbar destinations (same as bottom nav, role-aware)
 if ($current_role === 'customer') {
     $desktop_nav = [
-        ['label' => 'Home',    'href' => '/feed/index.php',              'match' => '/feed/index.php',       'icon' => 'home'],
-        ['label' => 'Explore', 'href' => '/cafes/discover.php',          'match' => '/cafes/',               'icon' => 'magnifying-glass'],
-        ['label' => 'Post',    'href' => '/feed/create_post.php',        'match' => '/feed/create_post.php', 'icon' => 'plus'],
-        ['label' => 'Inbox',   'href' => '/chat/inbox.php',              'match' => '/chat/',                'icon' => 'inbox'],
-        ['label' => 'Orders',  'href' => '/orders/customer_history.php', 'match' => '/orders/',              'icon' => 'receipt'],
-        ['label' => 'Profile', 'href' => '/profile/view.php',            'match' => '/profile/',             'icon' => 'user-circle'],
+        ['label' => 'Home',    'href' => '/feed/index.php',              'match' => '/feed/index.php',       'icon' => 'home',              'tour' => 'home'],
+        ['label' => 'Explore', 'href' => '/cafes/discover.php',          'match' => '/cafes/',               'icon' => 'magnifying-glass',  'tour' => 'explore'],
+        ['label' => 'Post',    'href' => '/feed/create_post.php',        'match' => '/feed/create_post.php', 'icon' => 'plus',              'tour' => 'post'],
+        ['label' => 'Inbox',   'href' => '/chat/inbox.php',              'match' => '/chat/',                'icon' => 'inbox',             'tour' => 'inbox'],
+        ['label' => 'Orders',  'href' => '/orders/customer_history.php', 'match' => '/orders/',              'icon' => 'receipt',           'tour' => 'orders'],
+        ['label' => 'Profile', 'href' => '/profile/view.php',            'match' => '/profile/',             'icon' => 'user-circle',       'tour' => 'profile'],
     ];
 } elseif ($current_role === 'seller') {
     $desktop_nav = [
-        ['label' => 'Home',    'href' => '/queue/index.php',             'match' => '/queue/',               'icon' => 'home'],
-        ['label' => 'Feed',    'href' => '/feed/index.php',              'match' => '/feed/index.php',       'icon' => 'storefront'],
-        ['label' => 'Post',    'href' => '/feed/create_post.php',        'match' => '/feed/create_post.php', 'icon' => 'plus'],
-        ['label' => 'Menu',    'href' => '/menu/index.php',              'match' => '/menu/',                'icon' => 'queue-list'],
-        ['label' => 'Orders',  'href' => '/orders/seller_dashboard.php', 'match' => '/orders/',              'icon' => 'receipt'],
-        ['label' => 'Profile', 'href' => '/profile/view.php',            'match' => '/profile/',             'icon' => 'user-circle'],
+        ['label' => 'Home',    'href' => '/queue/index.php',             'match' => '/queue/',               'icon' => 'home',              'tour' => 'home'],
+        ['label' => 'Feed',    'href' => '/feed/index.php',              'match' => '/feed/index.php',       'icon' => 'storefront',        'tour' => 'feed'],
+        ['label' => 'Post',    'href' => '/feed/create_post.php',        'match' => '/feed/create_post.php', 'icon' => 'plus',              'tour' => 'post'],
+        ['label' => 'Menu',    'href' => '/menu/index.php',              'match' => '/menu/',                'icon' => 'queue-list',        'tour' => 'menu'],
+        ['label' => 'Orders',  'href' => '/orders/seller_dashboard.php', 'match' => '/orders/',              'icon' => 'receipt',           'tour' => 'orders'],
+        ['label' => 'Profile', 'href' => '/profile/view.php',            'match' => '/profile/',             'icon' => 'user-circle',       'tour' => 'profile'],
     ];
 } else {
     $desktop_nav = [];
@@ -137,6 +137,14 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
     </script>
     <script src="/includes/ui.js" defer></script>
     <script src="/includes/location.js" defer></script>
+    <!-- Driver.js: guided product tour (vanilla JS, CDN only — no build
+         step, matches how Turbo/NProgress are already loaded). -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css">
+    <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.js"></script>
+    <script src="/includes/tour.js" defer></script>
+    <?php if ($is_app_user): ?>
+        <script>window.HIGOFFE_USER_ID = <?= (int) $_SESSION['user_id'] ?>;</script>
+    <?php endif; ?>
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -145,6 +153,19 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
         #nprogress .peg { box-shadow: 0 0 10px #e0701a, 0 0 5px #e0701a; }
         #nprogress .spinner { display: none; }
         .turbo-progress-bar { display: none; } /* NProgress is the one loading bar */
+        /* Driver.js theming — match the cream/coffee/accent palette instead
+           of its default black-and-white look. */
+        .driver-popover { background: #faf7f2; color: #292524; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,.25); font-family: inherit; }
+        .driver-popover-title { color: #3e2d1f; font-weight: 800; }
+        .driver-popover-description { color: #57534e; }
+        .driver-popover-progress-text { color: #a8a29e; font-size: 11px; }
+        .driver-popover-footer button { border-radius: 9999px !important; font-weight: 700 !important; text-shadow: none !important; }
+        .driver-popover-next-btn, .driver-popover-prev-btn { background: #e0701a !important; color: #fff !important; border: none !important; }
+        .driver-popover-prev-btn { background: #e7e5e4 !important; color: #44403c !important; }
+        .driver-popover-prev-btn.driver-popover-btn-disabled { opacity: .4 !important; }
+        .higoffe-tour-skip { background: transparent !important; color: #a8a29e !important; border: none !important; font-size: 12px !important; font-weight: 600 !important; margin-right: auto; }
+        .driver-popover-close-btn { color: #a8a29e !important; }
+        .driver-active-element { border-radius: .75rem !important; }
     </style>
 </head>
 <body class="bg-stone-200 text-stone-800"<?= !empty($wants_location) ? ' data-wants-location="1"' : '' ?>>
@@ -204,7 +225,7 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
             <nav class="flex flex-1 items-center gap-1">
                 <?php foreach ($desktop_nav as $item): ?>
                     <?php $is_nav_active = strpos($current_path, $item['match']) === 0; ?>
-                    <a href="<?= $item['href'] ?>"
+                    <a href="<?= $item['href'] ?>" data-tour="nav-<?= $item['tour'] ?>"
                        class="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors <?= $is_nav_active ? 'bg-coffee text-white' : 'text-stone-600 hover:bg-cream' ?>">
                         <?php icon($item['icon'], 'w-4.5 h-4.5'); ?>
                         <?= $item['label'] ?>
@@ -212,7 +233,7 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
                 <?php endforeach; ?>
             </nav>
 
-            <a href="/notifications.php" aria-label="Notifications"
+            <a href="/notifications.php" aria-label="Notifications" data-tour="notif-bell"
                class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors <?= strpos($current_path, '/notifications.php') === 0 ? 'bg-coffee text-white' : 'text-stone-500 hover:bg-cream' ?>">
                 <?php icon('bell', 'w-5 h-5'); ?>
                 <?php if ($unread_notifications > 0): ?>
@@ -265,7 +286,7 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
                             <?php icon('map-pin-solid', 'w-3 h-3 text-accent'); ?>
                             <span class="location-chip-label">Set location</span>
                         </button>
-                        <a href="/notifications.php" aria-label="Notifications" class="relative flex h-9 w-9 items-center justify-center rounded-full text-stone-500 active:bg-stone-200">
+                        <a href="/notifications.php" aria-label="Notifications" data-tour="notif-bell" class="relative flex h-9 w-9 items-center justify-center rounded-full text-stone-500 active:bg-stone-200">
                             <?php icon('bell', 'w-5 h-5'); ?>
                             <?php if ($unread_notifications > 0): ?>
                                 <span class="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"><?= $unread_notifications > 9 ? '9+' : $unread_notifications ?></span>

@@ -49,7 +49,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <!-- This week -->
-<div class="mt-4 grid grid-cols-2 gap-2 px-4 lg:gap-3 lg:px-6">
+<div id="queue-stats" class="mt-4 grid grid-cols-2 gap-2 px-4 lg:gap-3 lg:px-6">
     <div class="rounded-2xl bg-white p-3.5 lg:border lg:border-stone-100">
         <p class="text-[10px] font-bold uppercase tracking-wide text-stone-400">Completed (7 days)</p>
         <p class="mt-0.5 text-xl font-black text-stone-900"><?= (int) $week_sales['order_count'] ?></p>
@@ -61,7 +61,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <!-- Order status summary -->
-<div class="mt-3 grid grid-cols-4 gap-2 px-4 lg:gap-3 lg:px-6">
+<div id="queue-order-summary" class="mt-3 grid grid-cols-4 gap-2 px-4 lg:gap-3 lg:px-6">
     <?php foreach ($order_summary as $label => $count): ?>
         <a href="/orders/seller_dashboard.php" class="rounded-xl bg-white p-2.5 text-center">
             <p class="text-lg font-black <?= $count > 0 ? 'text-accent' : 'text-stone-300' ?>"><?= $count ?></p>
@@ -71,7 +71,7 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <!-- Waiting queue -->
-<section class="mt-5">
+<section id="queue-waiting-section" class="mt-5">
     <?php render_section_header('New inquiries (' . count($waiting_chats) . ')'); ?>
     <?php if (empty($waiting_chats)): ?>
         <?php render_empty_state('check-circle', 'Queue is clear', 'New customer inquiries will appear here, oldest first.'); ?>
@@ -92,7 +92,7 @@ require_once __DIR__ . '/../includes/header.php';
 </section>
 
 <!-- Active conversations -->
-<section class="mt-5">
+<section id="queue-active-section" class="mt-5">
     <?php render_section_header('Active chats (' . count($active_chats) . ')'); ?>
     <?php if (empty($active_chats)): ?>
         <?php render_empty_state('chat-bubble', 'No active conversations'); ?>
@@ -145,5 +145,16 @@ document.querySelectorAll('.claim-btn').forEach(function (btn) {
         }
     });
 });
+</script>
+<script>
+if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
+    window.HigoffeTour.run('queue', [
+        { selector: '#queue-stats', title: "This week's numbers", description: 'Completed orders and revenue over the last 7 days.' },
+        { selector: '#queue-order-summary', title: 'Order pipeline', description: 'Tap any status to jump straight to those orders.' },
+        { selector: '#queue-waiting-section', title: 'New inquiries', description: 'Customer chats wait here first — oldest on top.' },
+        { selector: '.claim-btn', title: 'Accept an inquiry', description: 'Claim it to start replying — only one seller can claim each inquiry.' },
+        { selector: '#queue-active-section', title: 'Active chats', description: "Inquiries you've claimed — tap one to keep chatting." }
+    ]);
+}
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

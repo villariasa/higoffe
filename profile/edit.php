@@ -49,6 +49,22 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
         <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Save</button>
     </form>
+
+    <div class="mt-4 rounded-2xl bg-white p-3.5">
+        <p class="text-xs font-semibold text-stone-500">Tutorials</p>
+        <p class="mt-0.5 text-[11px] text-stone-400">Replay the guided walkthrough of the app's main features.</p>
+        <button type="button" id="btn-restart-tour" class="mt-2.5 rounded-xl border border-stone-300 px-3.5 py-2 text-xs font-bold text-stone-600 hover:border-coffee">Restart tutorial</button>
+    </div>
 </div>
 <script src="/includes/image_upload.js"></script>
+<script>
+document.getElementById('btn-restart-tour')?.addEventListener('click', function () {
+    if (window.HigoffeTour) window.HigoffeTour.reset('all');
+    window.higoffeToast('Tutorial reset — it will start again on your next page.', 'success');
+    const home = <?= json_encode($_SESSION['role'] === 'seller' ? '/queue/index.php' : '/feed/index.php') ?>;
+    setTimeout(function () {
+        if (window.Turbo) { window.Turbo.visit(home); } else { window.location.href = home; }
+    }, 900);
+});
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
