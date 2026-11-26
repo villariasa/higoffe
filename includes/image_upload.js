@@ -7,6 +7,7 @@
     let modal = null;
     let cropper = null;
     let pendingResolve = null;
+    let currentRawFile = null; // fallback: if cropping fails for any reason, upload this unmodified rather than blocking the user
 
     function buildModal() {
         modal = document.createElement('div');
@@ -24,41 +25,64 @@
 
         modal.querySelector('#higoffe-crop-cancel').addEventListener('click', function () { closeModal(null); });
         modal.querySelector('#higoffe-crop-use').addEventListener('click', function () {
-            if (!cropper) { closeModal(null); return; }
-            cropper.getCroppedCanvas({ imageSmoothingQuality: 'high' }).toBlob(function (blob) {
-                closeModal(blob);
-            }, 'image/jpeg', 0.92);
+            // No working cropper (failed to init, still loading, etc.) —
+            // never block the upload over a cosmetic crop step; just use
+            // the photo as picked.
+            if (!cropper) { closeModal(currentRawFile); return; }
+            try {
+                cropper.getCroppedCanvas({ imageSmoothingQuality: 'high' }).toBlob(function (blob) {
+                    closeModal(blob || currentRawFile);
+                }, 'image/jpeg', 0.92);
+            } catch (err) {
+                closeModal(currentRawFile);
+            }
         });
     }
 
-    function closeModal(blob) {
-        if (cropper) { cropper.destroy(); cropper = null; }
+    function closeModal(result) {
+        if (cropper) { try { cropper.destroy(); } catch (e) {} cropper = null; }
         if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
         const img = document.getElementById('higoffe-crop-img');
         if (img && img.src && img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
         const resolve = pendingResolve;
         pendingResolve = null;
-        if (resolve) resolve(blob);
+        currentRawFile = null;
+        if (resolve) resolve(result);
     }
 
-    // Returns a Promise<Blob|null> — null means the user cancelled.
+    // Returns a Promise<Blob|File|null> — null means the user cancelled
+    // outright; otherwise either a cropped Blob or (on any failure) the
+    // original file, so a broken crop step never blocks an upload.
     function openCropper(file, aspect) {
         if (!modal) buildModal();
         return new Promise(function (resolve) {
             pendingResolve = resolve;
+            currentRawFile = file;
             const img = document.getElementById('higoffe-crop-img');
+
+            // Attach onload BEFORE setting src — assigning src first risks
+            // the load firing before the handler is attached, silently
+            // leaving `cropper` unset forever.
+            img.onload = function () {
+                try {
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(img, {
+                        aspectRatio: isFinite(aspect) ? aspect : NaN, // NaN = free-form, Cropper.js's own default
+                        viewMode: 1,
+                        autoCropArea: 1,
+                        background: false
+                    });
+                } catch (err) {
+                    cropper = null; // "Use photo" will fall back to the original file
+                }
+            };
+            img.onerror = function () {
+                cropper = null;
+            };
             img.src = URL.createObjectURL(file);
+
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            img.onload = function () {
-                if (cropper) cropper.destroy();
-                cropper = new Cropper(img, {
-                    aspectRatio: aspect, // undefined/NaN = free-form
-                    viewMode: 1,
-                    autoCropArea: 1,
-                    background: false
-                });
-            };
         });
     }
 
@@ -80,10 +104,17 @@
 
             let fileToUpload = rawFile;
             if (!skipCrop && rawFile.type && rawFile.type.startsWith('image/') && rawFile.type !== 'image/gif') {
-                const blob = await openCropper(rawFile, aspect);
-                if (!blob) { fileInput.value = ''; return; } // user cancelled
-                const baseName = (rawFile.name || 'photo').replace(/\.[^.]+$/, '');
-                fileToUpload = new File([blob], baseName + '.jpg', { type: 'image/jpeg' });
+                const result = await openCropper(rawFile, aspect);
+                if (!result) { fileInput.value = ''; return; } // user cancelled
+                // A plain Blob means cropping actually happened; the raw
+                // File passes straight through (fallback path) — only
+                // relabel as .jpg when it's really a cropped JPEG blob.
+                if (result instanceof File) {
+                    fileToUpload = result;
+                } else {
+                    const baseName = (rawFile.name || 'photo').replace(/\.[^.]+$/, '');
+                    fileToUpload = new File([result], baseName + '.jpg', { type: 'image/jpeg' });
+                }
             }
 
             if (submitBtn) submitBtn.disabled = true;
