@@ -8,7 +8,14 @@
     // ever per account (localStorage-gated in tour.js) on whichever page
     // the user happens to land on first, since this runs from the one
     // footer every app page shares.
-    (function () {
+    //
+    // tour.js is loaded with `defer`, so it only runs AFTER the whole page
+    // has finished parsing — this script tag (plain, inline, in the body)
+    // would otherwise execute first and crash on window.HigoffeTour being
+    // undefined. Deferring the call itself to DOMContentLoaded (which
+    // always fires after every deferred script has run) fixes that.
+    function higoffeRunShellTour() {
+        if (!window.HigoffeTour) return;
         var role = <?= json_encode($current_role) ?>;
         var steps = [
             { selector: '[data-tour="nav-home"]', title: 'Home', description: role === 'seller' ? "This is your seller dashboard — new inquiries, active chats, and today's stats." : 'Your feed — posts from cafés and people you follow.' }
@@ -30,7 +37,9 @@
         steps.push({ selector: '[data-tour="nav-profile"]', title: 'Profile', description: 'Your profile, bio, and app settings — including restarting this tour.' });
 
         window.HigoffeTour.run('shell', steps);
-    })();
+    }
+    document.addEventListener('DOMContentLoaded', higoffeRunShellTour);
+    document.addEventListener('turbo:load', higoffeRunShellTour);
     </script>
 <?php endif; ?>
 </body>

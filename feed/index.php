@@ -393,7 +393,8 @@ document.querySelectorAll('.comment-form').forEach(function (form) {
 <script>
 // Feed feature tour — only after the app-wide "shell" tour has run, so the
 // two don't pop up stacked on top of each other on a brand-new account.
-if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
+function higoffeRunFeedTour() {
+    if (!window.HigoffeTour || !window.HigoffeTour.isDone('shell')) return;
     window.HigoffeTour.run('feed', [
         { selector: '#feed-cafe-rail', title: 'Cafés', description: 'Browse cafés near you, or the most popular ones.' },
         { selector: '#feed-trending-rail', title: 'Trending drinks', description: 'The most-ordered drinks across all cafés right now.' },
@@ -402,5 +403,7 @@ if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
         { selector: '.share-btn', title: 'Share', description: 'Copy a direct link to this post.' }
     ]);
 }
+document.addEventListener('DOMContentLoaded', higoffeRunFeedTour);
+document.addEventListener('turbo:load', higoffeRunFeedTour);
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

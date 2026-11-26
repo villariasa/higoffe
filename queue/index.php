@@ -156,7 +156,8 @@ document.querySelectorAll('.claim-btn').forEach(function (btn) {
 });
 </script>
 <script>
-if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
+function higoffeRunQueueTour() {
+    if (!window.HigoffeTour || !window.HigoffeTour.isDone('shell')) return;
     window.HigoffeTour.run('queue', [
         { selector: '#queue-stats', title: "This week's numbers", description: 'Completed orders and revenue over the last 7 days.' },
         { selector: '#queue-order-summary', title: 'Order pipeline', description: 'Tap any status to jump straight to those orders.' },
@@ -165,5 +166,7 @@ if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
         { selector: '#queue-active-section', title: 'Active chats', description: "Inquiries you've claimed — tap one to keep chatting." }
     ]);
 }
+document.addEventListener('DOMContentLoaded', higoffeRunQueueTour);
+document.addEventListener('turbo:load', higoffeRunQueueTour);
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

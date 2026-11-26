@@ -362,7 +362,8 @@ require_once __DIR__ . '/../includes/header.php';
 })();
 </script>
 <script>
-if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
+function higoffeRunChatTour() {
+    if (!window.HigoffeTour || !window.HigoffeTour.isDone('shell')) return;
     var chatSteps = [];
     <?php if ($role === 'seller'): ?>
     chatSteps.push({ selector: '.quick-reply', title: 'Quick replies', description: 'Common responses, one tap — no retyping the same answers all day.' });
@@ -374,5 +375,7 @@ if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
     chatSteps.push({ selector: '#message-list', title: 'Read receipts', description: '"Seen" appears under your message once the other side has read it.' });
     window.HigoffeTour.run('chat', chatSteps);
 }
+document.addEventListener('DOMContentLoaded', higoffeRunChatTour);
+document.addEventListener('turbo:load', higoffeRunChatTour);
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

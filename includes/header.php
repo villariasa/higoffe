@@ -133,7 +133,7 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
         // Forms submit natively (full reload): our PHP re-renders error
         // states with HTTP 200 on POST, which Turbo Drive refuses to
         // render ("form responses must redirect"). Links stay smooth.
-        Turbo.setFormMode("off");
+        Turbo.config.forms.mode = "off";
     </script>
     <!-- Don't flash stale cached previews of dynamic pages (feed counts,
          chat messages) between navigations. -->

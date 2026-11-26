@@ -182,7 +182,8 @@ require_once __DIR__ . '/../includes/header.php';
 })();
 </script>
 <script>
-if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
+function higoffeRunCafeProfileTour() {
+    if (!window.HigoffeTour || !window.HigoffeTour.isDone('shell')) return;
     window.HigoffeTour.run('cafe_profile', [
         { selector: '#input-city', title: 'Pin your location', description: 'Type your city or area — no need to look up coordinates yourself.' },
         { selector: '#btn-geocode', title: 'Find it', description: 'We look it up and drop a pin automatically, so your data stays accurate.' },
@@ -190,5 +191,7 @@ if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {
         { selector: '.image-upload-field', title: 'Logo & cover photo', description: 'Add photos so customers recognize your café in the feed and on maps.' }
     ]);
 }
+document.addEventListener('DOMContentLoaded', higoffeRunCafeProfileTour);
+document.addEventListener('turbo:load', higoffeRunCafeProfileTour);
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
