@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class Conversation {
     private PDO $pdo;
 
@@ -27,10 +29,11 @@ class Conversation {
             return (int) $row['conversation_id'];
         }
 
-        $sql = "INSERT INTO conversations (customer_user_id, cafe_id) VALUES (:customer_user_id, :cafe_id) RETURNING conversation_id";
+        $conversation_id = IdGenerator::next($this->pdo, 'conversations', 'conversation_id');
+        $sql = "INSERT INTO conversations (conversation_id, customer_user_id, cafe_id) VALUES (:conversation_id, :customer_user_id, :cafe_id)";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(["customer_user_id" => $customer_user_id, "cafe_id" => $cafe_id]);
-        return (int) $stmt->fetchColumn();
+        $stmt->execute(["conversation_id" => $conversation_id, "customer_user_id" => $customer_user_id, "cafe_id" => $cafe_id]);
+        return $conversation_id;
     }
 
     // Waiting queue, oldest first — this IS the "queue organized by
@@ -47,7 +50,7 @@ class Conversation {
     }
 
     public function getActiveForSeller(int $seller_user_id) {
-        $sql = "SELECT cv.*, u.full_name AS customer_name
+        $sql = "SELECT cv.*, u.full_name AS customer_name, u.last_active_at AS other_last_active_at
                 FROM conversations cv
                 JOIN users u ON cv.customer_user_id = u.user_id
                 WHERE cv.assigned_seller_user_id = :seller_user_id AND cv.status = 'active'
@@ -69,9 +72,10 @@ class Conversation {
     }
 
     public function getForCustomer(int $customer_user_id) {
-        $sql = "SELECT cv.*, c.cafe_name, c.logo_url
+        $sql = "SELECT cv.*, c.cafe_name, c.logo_url, seller.last_active_at AS other_last_active_at
                 FROM conversations cv
                 JOIN cafes c ON cv.cafe_id = c.cafe_id
+                LEFT JOIN users seller ON cv.assigned_seller_user_id = seller.user_id
                 WHERE cv.customer_user_id = :customer_user_id
                 ORDER BY cv.last_message_at DESC";
         $stmt = $this->pdo->prepare($sql);

@@ -25,7 +25,7 @@ if ($messageModel->countForConversation($conversation_id) === 0) {
     // /queue/index.php watching its live counter.
     $cafe = (new Cafe($pdo))->getById($cafe_id);
     if ($cafe) {
-        (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' sent a new inquiry — check your queue to reply.');
+        (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' sent a new inquiry — check your queue to reply.', '/queue/index.php');
     }
 }
 

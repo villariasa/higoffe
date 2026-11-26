@@ -3,7 +3,7 @@
 -- See /home/litecloud/.claude/plans/rosy-strolling-bengio.md §2 for the full plan this came from.
 
 CREATE TABLE users (
-    user_id        SERIAL PRIMARY KEY,
+    user_id        INTEGER PRIMARY KEY,
     role           VARCHAR(20) NOT NULL CHECK (role IN ('customer','seller','admin')),
     full_name      VARCHAR(100) NOT NULL,
     email          VARCHAR(150) NOT NULL UNIQUE,
@@ -19,7 +19,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE cafes (
-    cafe_id        SERIAL PRIMARY KEY,
+    cafe_id        INTEGER PRIMARY KEY,
     owner_user_id  INTEGER NOT NULL REFERENCES users(user_id),
     cafe_name      VARCHAR(150) NOT NULL,
     description    TEXT,
@@ -33,7 +33,7 @@ CREATE TABLE cafes (
 );
 
 CREATE TABLE products (
-    product_id     SERIAL PRIMARY KEY,
+    product_id     INTEGER PRIMARY KEY,
     cafe_id        INTEGER NOT NULL REFERENCES cafes(cafe_id),
     product_name   VARCHAR(150) NOT NULL,
     description    TEXT,
@@ -45,14 +45,14 @@ CREATE TABLE products (
 );
 
 CREATE TABLE product_sizes (
-    size_id        SERIAL PRIMARY KEY,
+    size_id        INTEGER PRIMARY KEY,
     product_id     INTEGER NOT NULL REFERENCES products(product_id),
     size_label     VARCHAR(30) NOT NULL,
     price_addon    NUMERIC(10,2) NOT NULL DEFAULT 0
 );
 
 CREATE TABLE product_addons (
-    addon_id       SERIAL PRIMARY KEY,
+    addon_id       INTEGER PRIMARY KEY,
     product_id     INTEGER NOT NULL REFERENCES products(product_id),
     addon_label    VARCHAR(50) NOT NULL,
     addon_price    NUMERIC(10,2) NOT NULL DEFAULT 0
@@ -68,7 +68,7 @@ CREATE TABLE product_addons (
 -- visibility: 'public' = global feed; 'cafe_only' = shown only on the
 -- relevant café's page (and to the author themselves).
 CREATE TABLE posts (
-    post_id        SERIAL PRIMARY KEY,
+    post_id        INTEGER PRIMARY KEY,
     author_user_id INTEGER NOT NULL REFERENCES users(user_id),
     cafe_id        INTEGER NULL REFERENCES cafes(cafe_id),
     tagged_cafe_id INTEGER NULL REFERENCES cafes(cafe_id),
@@ -81,7 +81,7 @@ CREATE TABLE posts (
 );
 
 CREATE TABLE post_likes (
-    like_id        SERIAL PRIMARY KEY,
+    like_id        INTEGER PRIMARY KEY,
     post_id        INTEGER NOT NULL REFERENCES posts(post_id),
     user_id        INTEGER NOT NULL REFERENCES users(user_id),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -90,7 +90,7 @@ CREATE TABLE post_likes (
 
 -- Core social feature (was stretch-only under the old ordering-first scope).
 CREATE TABLE post_comments (
-    comment_id     SERIAL PRIMARY KEY,
+    comment_id     INTEGER PRIMARY KEY,
     post_id        INTEGER NOT NULL REFERENCES posts(post_id),
     user_id        INTEGER NOT NULL REFERENCES users(user_id),
     comment_text   TEXT NOT NULL,
@@ -99,7 +99,7 @@ CREATE TABLE post_comments (
 
 -- Customer follows a café (unchanged from the original plan).
 CREATE TABLE follows (
-    follow_id        SERIAL PRIMARY KEY,
+    follow_id        INTEGER PRIMARY KEY,
     customer_user_id INTEGER NOT NULL REFERENCES users(user_id),
     cafe_id          INTEGER NOT NULL REFERENCES cafes(cafe_id),
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -109,7 +109,7 @@ CREATE TABLE follows (
 -- User follows user — separate table from `follows` on purpose: two plain
 -- tables are simpler and clearer than one polymorphic nullable-pair table.
 CREATE TABLE user_follows (
-    user_follow_id    SERIAL PRIMARY KEY,
+    user_follow_id    INTEGER PRIMARY KEY,
     follower_user_id  INTEGER NOT NULL REFERENCES users(user_id),
     followed_user_id  INTEGER NOT NULL REFERENCES users(user_id),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -118,7 +118,7 @@ CREATE TABLE user_follows (
 );
 
 CREATE TABLE conversations (
-    conversation_id         SERIAL PRIMARY KEY,
+    conversation_id         INTEGER PRIMARY KEY,
     customer_user_id        INTEGER NOT NULL REFERENCES users(user_id),
     cafe_id                 INTEGER NOT NULL REFERENCES cafes(cafe_id),
     assigned_seller_user_id INTEGER NULL REFERENCES users(user_id),
@@ -134,7 +134,7 @@ CREATE TABLE conversations (
 );
 
 CREATE TABLE messages (
-    message_id      SERIAL PRIMARY KEY,
+    message_id      INTEGER PRIMARY KEY,
     conversation_id INTEGER NOT NULL REFERENCES conversations(conversation_id),
     sender_user_id  INTEGER NOT NULL REFERENCES users(user_id),
     message_type    VARCHAR(20) NOT NULL DEFAULT 'text' CHECK (message_type IN ('text','order_card','image','system')),
@@ -145,12 +145,12 @@ CREATE TABLE messages (
 );
 
 CREATE TABLE order_statuses (
-    status_id    SERIAL PRIMARY KEY,
+    status_id    INTEGER PRIMARY KEY,
     status_label VARCHAR(30) NOT NULL UNIQUE
 );
 
 CREATE TABLE orders (
-    order_id           SERIAL PRIMARY KEY,
+    order_id           INTEGER PRIMARY KEY,
     conversation_id    INTEGER NOT NULL REFERENCES conversations(conversation_id),
     customer_user_id   INTEGER NOT NULL REFERENCES users(user_id),
     cafe_id            INTEGER NOT NULL REFERENCES cafes(cafe_id),
@@ -168,7 +168,7 @@ CREATE TABLE orders (
 );
 
 CREATE TABLE order_items (
-    order_item_id SERIAL PRIMARY KEY,
+    order_item_id INTEGER PRIMARY KEY,
     order_id      INTEGER NOT NULL REFERENCES orders(order_id),
     product_id    INTEGER NOT NULL REFERENCES products(product_id),
     size_id       INTEGER NULL REFERENCES product_sizes(size_id),
@@ -178,7 +178,7 @@ CREATE TABLE order_items (
 );
 
 CREATE TABLE order_item_addons (
-    order_item_addon_id SERIAL PRIMARY KEY,
+    order_item_addon_id INTEGER PRIMARY KEY,
     order_item_id       INTEGER NOT NULL REFERENCES order_items(order_item_id),
     addon_id             INTEGER NOT NULL REFERENCES product_addons(addon_id),
     addon_price          NUMERIC(10,2) NOT NULL
@@ -197,7 +197,7 @@ CREATE TABLE settings (
 -- customers whose Completed order actually contained that product
 -- (verified-buyer gate, enforced in PHP).
 CREATE TABLE product_reviews (
-    review_id        SERIAL PRIMARY KEY,
+    review_id        INTEGER PRIMARY KEY,
     product_id       INTEGER NOT NULL REFERENCES products(product_id),
     customer_user_id INTEGER NOT NULL REFERENCES users(user_id),
     rating           INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
@@ -208,7 +208,7 @@ CREATE TABLE product_reviews (
 
 -- Product likes (lightweight favorites on menu items).
 CREATE TABLE product_likes (
-    like_id    SERIAL PRIMARY KEY,
+    like_id    INTEGER PRIMARY KEY,
     product_id INTEGER NOT NULL REFERENCES products(product_id),
     user_id    INTEGER NOT NULL REFERENCES users(user_id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -219,7 +219,7 @@ CREATE TABLE product_likes (
 -- least one Completed order there ("verified buyer" reviews — enforced in
 -- PHP). Re-reviewing updates the existing row.
 CREATE TABLE cafe_reviews (
-    review_id        SERIAL PRIMARY KEY,
+    review_id        INTEGER PRIMARY KEY,
     cafe_id          INTEGER NOT NULL REFERENCES cafes(cafe_id),
     customer_user_id INTEGER NOT NULL REFERENCES users(user_id),
     rating           INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
@@ -231,16 +231,17 @@ CREATE TABLE cafe_reviews (
 -- In-app notifications (e.g. "an admin removed your post"). Minimal by
 -- design: plain text body, read flag, newest-first list.
 CREATE TABLE notifications (
-    notification_id SERIAL PRIMARY KEY,
+    notification_id INTEGER PRIMARY KEY,
     user_id         INTEGER NOT NULL REFERENCES users(user_id),
     body            TEXT NOT NULL,
+    link            VARCHAR(255) NULL,
     is_read         BOOLEAN NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Content-moderation reports (customers flag a post/café; admin reviews).
 CREATE TABLE reports (
-    report_id        SERIAL PRIMARY KEY,
+    report_id        INTEGER PRIMARY KEY,
     reporter_user_id INTEGER NOT NULL REFERENCES users(user_id),
     target_type      VARCHAR(20) NOT NULL CHECK (target_type IN ('post','user','cafe')),
     target_id        INTEGER NOT NULL,

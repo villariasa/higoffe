@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class PostLike {
     private PDO $pdo;
 
@@ -19,8 +21,9 @@ class PostLike {
             return false;
         }
 
-        $ins = $this->pdo->prepare("INSERT INTO post_likes (post_id, user_id) VALUES (:post_id, :user_id)");
-        $ins->execute(["post_id" => $post_id, "user_id" => $user_id]);
+        $like_id = IdGenerator::next($this->pdo, 'post_likes', 'like_id');
+        $ins = $this->pdo->prepare("INSERT INTO post_likes (like_id, post_id, user_id) VALUES (:like_id, :post_id, :user_id)");
+        $ins->execute(["like_id" => $like_id, "post_id" => $post_id, "user_id" => $user_id]);
         return true;
     }
 }

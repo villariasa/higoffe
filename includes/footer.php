@@ -1,7 +1,7 @@
     </main>
 </div><!-- /content column -->
 </div><!-- /shell -->
-<?php require_once __DIR__ . '/bottom_nav.php'; ?>
+<?php if (empty($hide_bottom_nav)) require_once __DIR__ . '/bottom_nav.php'; ?>
 <?php if ($is_app_user): ?>
     <script>
     // Main "shell" tour — the app-wide orientation walkthrough. Fires once

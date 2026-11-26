@@ -22,7 +22,8 @@ require_once __DIR__ . '/includes/header.php';
     <?php else: ?>
         <div class="space-y-2">
             <?php foreach ($notifications as $n): ?>
-                <div class="flex items-start gap-3 rounded-2xl bg-white p-3.5 <?= $n['is_read'] ? 'opacity-70' : 'border border-accent/30' ?>">
+                <?php $tag = !empty($n['link']) ? 'a' : 'div'; ?>
+                <<?= $tag ?> <?= !empty($n['link']) ? 'href="' . htmlspecialchars($n['link'], ENT_QUOTES, 'UTF-8') . '"' : '' ?> class="flex items-start gap-3 rounded-2xl bg-white p-3.5 <?= $n['is_read'] ? 'opacity-70' : 'border border-accent/30' ?> <?= !empty($n['link']) ? 'hover:bg-cream' : '' ?>">
                     <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500">
                         <?php icon('bell', 'w-4 h-4'); ?>
                     </span>
@@ -33,7 +34,7 @@ require_once __DIR__ . '/includes/header.php';
                     <?php if (!$n['is_read']): ?>
                         <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent"></span>
                     <?php endif; ?>
-                </div>
+                </<?= $tag ?>>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class Follow {
     private PDO $pdo;
 
@@ -20,9 +22,10 @@ class Follow {
             $stmt->execute(["customer_user_id" => $customer_user_id, "cafe_id" => $cafe_id]);
             return false;
         }
-        $sql = "INSERT INTO follows (customer_user_id, cafe_id) VALUES (:customer_user_id, :cafe_id)";
+        $follow_id = IdGenerator::next($this->pdo, 'follows', 'follow_id');
+        $sql = "INSERT INTO follows (follow_id, customer_user_id, cafe_id) VALUES (:follow_id, :customer_user_id, :cafe_id)";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(["customer_user_id" => $customer_user_id, "cafe_id" => $cafe_id]);
+        $stmt->execute(["follow_id" => $follow_id, "customer_user_id" => $customer_user_id, "cafe_id" => $cafe_id]);
         return true;
     }
 

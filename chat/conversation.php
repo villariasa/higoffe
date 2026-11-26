@@ -58,17 +58,25 @@ $orderModel = new Order($pdo);
 $upload_auth = Uploads::issueToken($user_id, 'chat');
 
 // Header identity: customer sees the café; seller sees the customer.
+$userModel = new User($pdo);
+$other_last_active_at = null;
 if ($role === 'customer') {
     $cafeModel = new Cafe($pdo);
     $other = $cafeModel->getById((int) $conversation['cafe_id']);
     $other_name = $other['cafe_name'] ?? 'Café';
     $other_avatar = $other['logo_url'] ?? null;
+    // "Active now" tracks the person, not the café entity — the assigned
+    // seller, if the inquiry has been claimed.
+    if (!empty($conversation['assigned_seller_user_id'])) {
+        $seller_row = $userModel->getById((int) $conversation['assigned_seller_user_id']);
+        $other_last_active_at = $seller_row['last_active_at'] ?? null;
+    }
     $back = '/chat/inbox.php';
 } else {
-    $userModel = new User($pdo);
     $other = $userModel->getById((int) $conversation['customer_user_id']);
     $other_name = $other['full_name'] ?? 'Customer';
     $other_avatar = $other['avatar_url'] ?? null;
+    $other_last_active_at = $other['last_active_at'] ?? null;
     $back = '/queue/index.php';
 }
 
@@ -84,6 +92,7 @@ $quick_replies = [
 ];
 
 $no_shell = true; // custom chat top bar below
+$hide_bottom_nav = true; // Messenger-style: the composer replaces the tab bar on this screen
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -93,13 +102,13 @@ require_once __DIR__ . '/../includes/header.php';
         <?php $active_conversation_id = $conversation_id; include __DIR__ . '/_conversation_list.php'; ?>
     </div>
 
-<div class="flex h-[calc(100dvh-5rem)] w-full flex-col lg:h-full lg:rounded-r-2xl lg:border lg:border-l-0 lg:border-stone-200 lg:bg-white">
+<div class="flex h-[100dvh] w-full flex-col lg:h-full lg:rounded-r-2xl lg:border lg:border-l-0 lg:border-stone-200 lg:bg-white">
     <!-- Chat top bar -->
     <header class="sticky top-0 z-40 flex items-center gap-2 border-b border-stone-200 bg-cream/95 px-2 py-2 backdrop-blur lg:rounded-t-2xl lg:border lg:bg-white">
         <a href="<?= $back ?>" aria-label="Back" class="flex h-9 w-9 items-center justify-center rounded-full active:bg-stone-200">
             <?php icon('arrow-left', 'w-5 h-5 text-stone-700'); ?>
         </a>
-        <?php render_avatar($other_avatar, $other_name, 'w-8 h-8'); ?>
+        <?php render_avatar($other_avatar, $other_name, 'w-8 h-8', $other_last_active_at); ?>
         <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-bold text-stone-900"><?= htmlspecialchars($other_name, ENT_QUOTES, 'UTF-8') ?></p>
             <p class="text-[10px] uppercase tracking-wide text-stone-400"><?= htmlspecialchars($conversation['status'], ENT_QUOTES, 'UTF-8') ?></p>
@@ -191,6 +200,7 @@ require_once __DIR__ . '/../includes/header.php';
         if (m.message_type === 'system') {
             const p = document.createElement('p');
             p.className = 'text-center text-[11px] text-stone-400 italic py-0.5';
+            p.dataset.messageId = m.message_id;
             p.textContent = m.body || '';
             return p;
         }
@@ -240,22 +250,38 @@ require_once __DIR__ . '/../includes/header.php';
         last.appendChild(seen);
     }
 
+    // Sending a message triggers an immediate poll() on top of the regular
+    // 3s interval — if both happen to be in flight at once they'd both
+    // fetch with the same stale afterId and both append the same message
+    // twice (sender-only, since only the sender fires that extra manual
+    // poll). Reentrancy guard + a DOM-level dedupe as a second safety net.
+    let pollInFlight = false;
+
     async function poll() {
         // Under Turbo there is no page unload, so navigating away would
         // leak this interval forever — self-clear once our DOM is gone.
         if (!document.body.contains(list)) { clearInterval(pollTimer); return; }
-        if (document.hidden) return;
-        const res = await fetch('/chat/poll_messages.php?conversation_id=' + conversationId + '&after_id=' + afterId + '&my_read_id=' + afterId);
-        const data = await res.json();
-        const rows = data.messages || [];
-        rows.forEach(function (m) {
-            list.appendChild(renderBubble(m));
-            afterId = Math.max(afterId, m.message_id);
-        });
-        if (rows.length) list.scrollTop = list.scrollHeight;
-        typingIndicator.classList.toggle('hidden', !data.other_typing);
-        typingIndicator.classList.toggle('flex', !!data.other_typing);
-        updateReadReceipt(data.other_read_id || 0);
+        if (document.hidden || pollInFlight) return;
+        pollInFlight = true;
+        try {
+            const res = await fetch('/chat/poll_messages.php?conversation_id=' + conversationId + '&after_id=' + afterId + '&my_read_id=' + afterId);
+            const data = await res.json();
+            const rows = data.messages || [];
+            rows.forEach(function (m) {
+                if (m.message_id && list.querySelector('[data-message-id="' + m.message_id + '"]')) {
+                    afterId = Math.max(afterId, m.message_id);
+                    return; // already rendered — skip
+                }
+                list.appendChild(renderBubble(m));
+                afterId = Math.max(afterId, m.message_id);
+            });
+            if (rows.length) list.scrollTop = list.scrollHeight;
+            typingIndicator.classList.toggle('hidden', !data.other_typing);
+            typingIndicator.classList.toggle('flex', !!data.other_typing);
+            updateReadReceipt(data.other_read_id || 0);
+        } finally {
+            pollInFlight = false;
+        }
     }
 
     let lastTypingPing = 0;

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class OrderItem {
     private PDO $pdo;
 
@@ -7,11 +9,12 @@ class OrderItem {
     }
 
     public function create(int $order_id, int $product_id, ?int $size_id, int $quantity, float $unit_price, float $line_total): int {
-        $sql = "INSERT INTO order_items (order_id, product_id, size_id, quantity, unit_price, line_total)
-                VALUES (:order_id, :product_id, :size_id, :quantity, :unit_price, :line_total)
-                RETURNING order_item_id";
+        $order_item_id = IdGenerator::next($this->pdo, 'order_items', 'order_item_id');
+        $sql = "INSERT INTO order_items (order_item_id, order_id, product_id, size_id, quantity, unit_price, line_total)
+                VALUES (:order_item_id, :order_id, :product_id, :size_id, :quantity, :unit_price, :line_total)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
+            "order_item_id" => $order_item_id,
             "order_id"   => $order_id,
             "product_id" => $product_id,
             "size_id"    => $size_id,
@@ -19,7 +22,7 @@ class OrderItem {
             "unit_price" => $unit_price,
             "line_total" => $line_total,
         ]);
-        return (int) $stmt->fetchColumn();
+        return $order_item_id;
     }
 
     public function getForOrder(int $order_id) {
@@ -38,10 +41,11 @@ class OrderItem {
     // list one) — it's small enough to live here alongside the item it
     // belongs to, avoiding an extra class for a two-column join table.
     public function addAddon(int $order_item_id, int $addon_id, float $addon_price): void {
-        $sql = "INSERT INTO order_item_addons (order_item_id, addon_id, addon_price)
-                VALUES (:order_item_id, :addon_id, :addon_price)";
+        $order_item_addon_id = IdGenerator::next($this->pdo, 'order_item_addons', 'order_item_addon_id');
+        $sql = "INSERT INTO order_item_addons (order_item_addon_id, order_item_id, addon_id, addon_price)
+                VALUES (:order_item_addon_id, :order_item_id, :addon_id, :addon_price)";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(["order_item_id" => $order_item_id, "addon_id" => $addon_id, "addon_price" => $addon_price]);
+        $stmt->execute(["order_item_addon_id" => $order_item_addon_id, "order_item_id" => $order_item_id, "addon_id" => $addon_id, "addon_price" => $addon_price]);
     }
 
     public function getAddonsForItem(int $order_item_id) {

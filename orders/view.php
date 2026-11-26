@@ -60,7 +60,26 @@ $back_url = $role === 'customer' ? '/orders/customer_history.php' : '/orders/sel
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="space-y-3 px-4 py-4 lg:mx-auto lg:max-w-xl lg:px-0">
+<div id="order-detail-root" class="space-y-3 px-4 py-4 lg:mx-auto lg:max-w-xl lg:px-0">
     <?php require __DIR__ . '/_order_detail.php'; ?>
 </div>
+<script>
+// Live status — the seller confirming/advancing an order (or the customer
+// submitting payment proof) should show up here without a manual reload.
+(function () {
+    const root = document.getElementById('order-detail-root');
+    const orderId = <?= (int) $order_id ?>;
+    async function refresh() {
+        if (!document.body.contains(root) || document.hidden) return;
+        try {
+            const res = await fetch('/orders/detail_fragment.php?id=' + orderId);
+            if (res.ok) root.innerHTML = await res.text();
+        } catch (err) { /* next tick retries */ }
+    }
+    const timer = setInterval(function () {
+        if (!document.body.contains(root)) { clearInterval(timer); return; }
+        refresh();
+    }, 4000);
+})();
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

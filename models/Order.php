@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class Order {
     private PDO $pdo;
 
@@ -29,13 +31,14 @@ class Order {
 
     public function create(int $conversation_id, int $customer_user_id, int $cafe_id, string $fulfillment_type, string $delivery_address, float $subtotal, float $additional_charges): int {
         $total_amount = $subtotal + $additional_charges;
-        $sql = "INSERT INTO orders (conversation_id, customer_user_id, cafe_id, status_id, fulfillment_type, delivery_address, subtotal, additional_charges, total_amount)
-                VALUES (:conversation_id, :customer_user_id, :cafe_id,
+        $order_id = IdGenerator::next($this->pdo, 'orders', 'order_id');
+        $sql = "INSERT INTO orders (order_id, conversation_id, customer_user_id, cafe_id, status_id, fulfillment_type, delivery_address, subtotal, additional_charges, total_amount)
+                VALUES (:order_id, :conversation_id, :customer_user_id, :cafe_id,
                         (SELECT status_id FROM order_statuses WHERE status_label = 'Pending'),
-                        :fulfillment_type, :delivery_address, :subtotal, :additional_charges, :total_amount)
-                RETURNING order_id";
+                        :fulfillment_type, :delivery_address, :subtotal, :additional_charges, :total_amount)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
+            "order_id"           => $order_id,
             "conversation_id"    => $conversation_id,
             "customer_user_id"   => $customer_user_id,
             "cafe_id"            => $cafe_id,
@@ -45,7 +48,7 @@ class Order {
             "additional_charges" => $additional_charges,
             "total_amount"       => $total_amount,
         ]);
-        return (int) $stmt->fetchColumn();
+        return $order_id;
     }
 
     public function getForSellerByStatus(int $cafe_id, string $status_label) {

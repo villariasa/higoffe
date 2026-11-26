@@ -19,7 +19,7 @@ $like_count = (int) $count_stmt->fetchColumn();
 if ($liked) {
     $post = (new Post($pdo))->getById($post_id);
     if ($post && (int) $post['author_user_id'] !== $user_id) {
-        (new Notification($pdo))->create((int) $post['author_user_id'], $_SESSION['full_name'] . ' liked your post.');
+        (new Notification($pdo))->create((int) $post['author_user_id'], $_SESSION['full_name'] . ' liked your post.', '/feed/post.php?id=' . $post_id);
     }
 }
 

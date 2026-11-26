@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class ProductSize {
     private PDO $pdo;
 
@@ -21,11 +23,12 @@ class ProductSize {
     }
 
     public function create(int $product_id, string $size_label, float $price_addon) {
-        $sql = "INSERT INTO product_sizes (product_id, size_label, price_addon)
-                VALUES (:product_id, :size_label, :price_addon) RETURNING size_id";
+        $size_id = IdGenerator::next($this->pdo, 'product_sizes', 'size_id');
+        $sql = "INSERT INTO product_sizes (size_id, product_id, size_label, price_addon)
+                VALUES (:size_id, :product_id, :size_label, :price_addon)";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(["product_id" => $product_id, "size_label" => $size_label, "price_addon" => $price_addon]);
-        return $stmt->fetchColumn();
+        $stmt->execute(["size_id" => $size_id, "product_id" => $product_id, "size_label" => $size_label, "price_addon" => $price_addon]);
+        return $size_id;
     }
 
     public function delete(int $size_id) {

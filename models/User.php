@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class User {
     private PDO $pdo;
 
@@ -22,18 +24,19 @@ class User {
 
     public function create(string $role, string $full_name, string $email, string $password, string $phone = '') {
         $password_hash = password_hash($password, PASSWORD_DEFAULT);
-        $sql = "INSERT INTO users (role, full_name, email, password_hash, phone)
-                VALUES (:role, :full_name, :email, :password_hash, :phone)
-                RETURNING user_id";
+        $user_id = IdGenerator::next($this->pdo, 'users', 'user_id');
+        $sql = "INSERT INTO users (user_id, role, full_name, email, password_hash, phone)
+                VALUES (:user_id, :role, :full_name, :email, :password_hash, :phone)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
+            "user_id"       => $user_id,
             "role"          => $role,
             "full_name"     => $full_name,
             "email"         => $email,
             "password_hash" => $password_hash,
             "phone"         => $phone,
         ]);
-        return $stmt->fetchColumn();
+        return $user_id;
     }
 
     public function updateProfile(int $user_id, string $bio, string $avatar_url, string $full_name): void {

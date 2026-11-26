@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class PostComment {
     private PDO $pdo;
 
@@ -18,11 +20,12 @@ class PostComment {
     }
 
     public function create(int $post_id, int $user_id, string $comment_text): int {
-        $sql = "INSERT INTO post_comments (post_id, user_id, comment_text)
-                VALUES (:post_id, :user_id, :comment_text) RETURNING comment_id";
+        $comment_id = IdGenerator::next($this->pdo, 'post_comments', 'comment_id');
+        $sql = "INSERT INTO post_comments (comment_id, post_id, user_id, comment_text)
+                VALUES (:comment_id, :post_id, :user_id, :comment_text)";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(["post_id" => $post_id, "user_id" => $user_id, "comment_text" => $comment_text]);
-        return (int) $stmt->fetchColumn();
+        $stmt->execute(["comment_id" => $comment_id, "post_id" => $post_id, "user_id" => $user_id, "comment_text" => $comment_text]);
+        return $comment_id;
     }
 
     public function delete(int $comment_id): bool {

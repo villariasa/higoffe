@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../config/IdGenerator.php';
 require_once __DIR__ . '/../models/Conversation.php';
 require_once __DIR__ . '/../models/Cafe.php';
 require_once __DIR__ . '/../models/Product.php';
@@ -45,13 +46,16 @@ function getDraft(PDO $pdo, int $conv_id, int $uid): array {
     return $row ? (json_decode($row['items'], true) ?: []) : [];
 }
 function saveDraft(PDO $pdo, int $conv_id, int $uid, array $items): void {
+    // On conflict (updating an existing draft), the existing row keeps its
+    // own draft_id — this generated one is only used on a fresh insert.
+    $draft_id = IdGenerator::next($pdo, 'order_drafts', 'draft_id');
     $st = $pdo->prepare(
-        'INSERT INTO order_drafts (conversation_id, customer_user_id, items, updated_at)
-         VALUES (:c, :u, :i, NOW())
+        'INSERT INTO order_drafts (draft_id, conversation_id, customer_user_id, items, updated_at)
+         VALUES (:d, :c, :u, :i, NOW())
          ON CONFLICT (conversation_id, customer_user_id)
          DO UPDATE SET items = EXCLUDED.items, updated_at = NOW()'
     );
-    $st->execute([':c' => $conv_id, ':u' => $uid, ':i' => json_encode($items)]);
+    $st->execute([':d' => $draft_id, ':c' => $conv_id, ':u' => $uid, ':i' => json_encode($items)]);
 }
 function clearDraft(PDO $pdo, int $conv_id, int $uid): void {
     $st = $pdo->prepare('DELETE FROM order_drafts WHERE conversation_id=:c AND customer_user_id=:u');

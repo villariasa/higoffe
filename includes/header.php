@@ -85,6 +85,14 @@ $unread_notifications = 0;
 if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
     require_once __DIR__ . '/../models/Notification.php';
     $unread_notifications = (new Notification($pdo))->countUnread((int) $_SESSION['user_id']);
+
+    // "Active now" presence (green dot, Messenger/Instagram-style) —
+    // throttled to once a minute so this isn't a write on every request.
+    if (empty($_SESSION['last_presence_write']) || (time() - $_SESSION['last_presence_write']) > 60) {
+        $pdo->prepare("UPDATE users SET last_active_at = NOW() WHERE user_id = :user_id")
+            ->execute(["user_id" => (int) $_SESSION['user_id']]);
+        $_SESSION['last_presence_write'] = time();
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -144,6 +152,8 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
     <script src="/includes/ui.js" defer></script>
     <script src="/includes/location.js" defer></script>
     <script src="/includes/lightbox.js" defer></script>
+    <script src="/includes/push_notify.js" defer></script>
+    <script src="/includes/notif_drawer.js" defer></script>
     <!-- Driver.js: guided product tour (vanilla JS, CDN only — no build
          step, matches how Turbo/NProgress are already loaded). -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css">
@@ -180,12 +190,18 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
         .driver-popover-prev-btn.driver-popover-btn-disabled { opacity: .4 !important; }
         .higoffe-tour-skip { background: transparent !important; color: #a8a29e !important; border: none !important; font-size: 12px !important; font-weight: 600 !important; margin-right: auto; }
         .driver-popover-close-btn { color: #a8a29e !important; }
-        .driver-active-element { border-radius: .75rem !important; }
+        /* Driver.js spotlights an element without disabling its native click
+           behavior — if the highlighted target is a real nav link, a tap
+           near it during the tour falls through to the link and navigates
+           away, which kills the tour mid-step ("appears then refreshes").
+           Block interaction with whatever's currently highlighted; Next/
+           Back/Skip in the popover are unaffected since they're outside it. */
+        .driver-active-element { border-radius: .75rem !important; pointer-events: none !important; }
     </style>
 </head>
 <body class="bg-stone-200 text-stone-800"<?= !empty($wants_location) ? ' data-wants-location="1"' : '' ?>>
 
-<div class="relative mx-auto min-h-screen w-full bg-cream <?= $is_admin ? 'max-w-none lg:grid lg:grid-cols-[240px_minmax(0,1fr)]' : ($is_app_user ? 'max-w-md shadow-xl lg:max-w-none lg:shadow-none' : 'max-w-md shadow-xl') ?> <?= $is_app_user ? 'pb-20 lg:pb-0' : '' ?>">
+<div class="relative mx-auto min-h-screen w-full bg-cream <?= $is_admin ? 'max-w-none lg:grid lg:grid-cols-[240px_minmax(0,1fr)]' : ($is_app_user ? 'max-w-md shadow-xl lg:max-w-none lg:shadow-none' : 'max-w-md shadow-xl') ?> <?= ($is_app_user && empty($hide_bottom_nav)) ? 'pb-20 lg:pb-0' : '' ?>">
 
 <?php if ($is_admin): ?>
     <!-- Admin sidebar (desktop) -->
@@ -266,8 +282,14 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
 
             <!-- User mini -->
             <div class="flex shrink-0 items-center gap-2.5 rounded-xl border border-stone-200 bg-cream py-1.5 pl-1.5 pr-2.5">
-                <a href="/profile/view.php" class="flex h-8 w-8 items-center justify-center rounded-full bg-coffee/10 text-sm font-bold text-coffee">
-                    <?= htmlspecialchars(mb_strtoupper(mb_substr((string) ($_SESSION['full_name'] ?? '?'), 0, 1)), ENT_QUOTES, 'UTF-8') ?>
+                <a href="/profile/view.php" class="shrink-0">
+                    <?php if (!empty($_SESSION['avatar_url'])): ?>
+                        <img src="<?= htmlspecialchars($_SESSION['avatar_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-8 w-8 rounded-full object-cover">
+                    <?php else: ?>
+                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-coffee/10 text-sm font-bold text-coffee">
+                            <?= htmlspecialchars(mb_strtoupper(mb_substr((string) ($_SESSION['full_name'] ?? '?'), 0, 1)), ENT_QUOTES, 'UTF-8') ?>
+                        </span>
+                    <?php endif; ?>
                 </a>
                 <div class="min-w-0 leading-tight">
                     <p class="max-w-[9rem] truncate text-[12px] font-bold text-stone-900"><?= htmlspecialchars((string) ($_SESSION['full_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>

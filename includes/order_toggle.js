@@ -1,8 +1,32 @@
 // Expand-in-place order details (slide animation) — replaces navigating to
 // a separate page just to check an order's status. Lazy-fetches
 // orders/detail_fragment.php once per row, then toggles via max-height.
+// Whichever panel is open also self-refreshes every few seconds, so a
+// seller confirming an order / changing its status shows up on the
+// customer's side (and vice versa) without a manual reload.
 (function () {
+    let refreshTimer = null;
+
+    async function refreshOpenPanel() {
+        const panel = document.querySelector('.order-detail-panel[data-open="1"]');
+        if (!panel || !document.body.contains(panel)) return;
+        try {
+            const res = await fetch('/orders/detail_fragment.php?id=' + panel.dataset.orderId);
+            if (res.ok) panel.innerHTML = await res.text();
+        } catch (err) { /* next tick retries */ }
+    }
+
+    function ensureRefreshLoop() {
+        if (refreshTimer) return;
+        refreshTimer = setInterval(function () {
+            if (!document.querySelector('.order-row-toggle')) { clearInterval(refreshTimer); refreshTimer = null; return; }
+            if (document.hidden) return;
+            refreshOpenPanel();
+        }, 4000);
+    }
+
     function wire() {
+        ensureRefreshLoop();
         document.querySelectorAll('.order-row-toggle').forEach(function (btn) {
             if (btn.dataset.toggleBound) return;
             btn.dataset.toggleBound = '1';

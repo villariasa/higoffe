@@ -3,6 +3,13 @@
 // Supports environment variables (for Render/production) and config/db_credentials.php (for local development).
 class Database {
     public function connect(): PDO {
+        // Without this, PHP's date()/strtotime() formatting (used all over
+        // the app for "Waiting since...", order timestamps, etc.) falls
+        // back to whatever the server's default timezone happens to be —
+        // drifting from the Philippines-local time customers/sellers
+        // actually expect. Fixed here once, not per call site.
+        date_default_timezone_set('Asia/Manila');
+
         $host = getenv('DB_HOST');
         $port = getenv('DB_PORT');
         $name = getenv('DB_NAME');
@@ -41,6 +48,12 @@ class Database {
             // query client-side instead of using real PREPARE, which
             // sidesteps that entirely and is required when pooling.
             $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+            // Pin the session to a known timezone so every TIMESTAMPTZ the
+            // app reads back is unambiguously UTC — strtotime() then
+            // converts it correctly to Asia/Manila for display above.
+            // Without this, Postgres/Supabase's session default (which can
+            // vary) silently shifts every displayed time by its offset.
+            $pdo->exec("SET TIME ZONE 'UTC'");
             return $pdo;
         } catch (PDOException $e) {
             die("Database Connection Error: " . $e->getMessage());

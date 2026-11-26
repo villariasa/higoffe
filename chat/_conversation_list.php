@@ -48,7 +48,7 @@ function convUnreadCount(array $conv, string $role): int {
             ?>
             <a href="/chat/conversation.php?id=<?= (int) $conv['conversation_id'] ?>"
                class="flex items-center gap-3 px-4 py-3 lg:rounded-xl lg:px-3 <?= $is_active_row ? 'bg-coffee/10 lg:bg-coffee/10' : 'bg-white active:bg-stone-50 lg:bg-transparent lg:hover:bg-cream' ?>">
-                <?php render_avatar($row_avatar, $row_name, 'w-11 h-11'); ?>
+                <?php render_avatar($row_avatar, $row_name, 'w-11 h-11', $conv['other_last_active_at'] ?? null); ?>
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-bold text-stone-900"><?= htmlspecialchars($row_name, ENT_QUOTES, 'UTF-8') ?></p>
                     <p class="text-[11px] text-stone-400"><?= htmlspecialchars(time_ago($conv['last_message_at']), ENT_QUOTES, 'UTF-8') ?></p>

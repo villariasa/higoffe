@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class Message {
     private PDO $pdo;
 
@@ -38,11 +40,12 @@ class Message {
     }
 
     public function create(int $conversation_id, int $sender_user_id, string $message_type, string $body, ?int $order_id = null, string $image_url = ''): int {
-        $sql = "INSERT INTO messages (conversation_id, sender_user_id, message_type, body, order_id, image_url)
-                VALUES (:conversation_id, :sender_user_id, :message_type, :body, :order_id, :image_url)
-                RETURNING message_id";
+        $message_id = IdGenerator::next($this->pdo, 'messages', 'message_id');
+        $sql = "INSERT INTO messages (message_id, conversation_id, sender_user_id, message_type, body, order_id, image_url)
+                VALUES (:message_id, :conversation_id, :sender_user_id, :message_type, :body, :order_id, :image_url)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
+            "message_id"      => $message_id,
             "conversation_id" => $conversation_id,
             "sender_user_id"  => $sender_user_id,
             "message_type"    => $message_type,
@@ -50,7 +53,7 @@ class Message {
             "order_id"        => $order_id,
             "image_url"       => $image_url,
         ]);
-        return (int) $stmt->fetchColumn();
+        return $message_id;
     }
 
     // Scripted auto-reply / status-change messages ("barista will be with

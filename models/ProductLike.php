@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class ProductLike {
     private PDO $pdo;
 
@@ -18,8 +20,9 @@ class ProductLike {
             return false;
         }
 
-        $ins = $this->pdo->prepare("INSERT INTO product_likes (product_id, user_id) VALUES (:product_id, :user_id)");
-        $ins->execute(["product_id" => $product_id, "user_id" => $user_id]);
+        $like_id = IdGenerator::next($this->pdo, 'product_likes', 'like_id');
+        $ins = $this->pdo->prepare("INSERT INTO product_likes (like_id, product_id, user_id) VALUES (:like_id, :product_id, :user_id)");
+        $ins->execute(["like_id" => $like_id, "product_id" => $product_id, "user_id" => $user_id]);
         return true;
     }
 

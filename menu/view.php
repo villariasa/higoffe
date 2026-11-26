@@ -36,7 +36,7 @@ if ($is_customer && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?
         $reviewModel->upsert($product_id, $user_id, $rating, $review_text);
         $cafe = (new Cafe($pdo))->getById((int) $product['cafe_id']);
         if ($cafe && (int) $cafe['owner_user_id'] !== $user_id) {
-            (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' left a ' . $rating . '-star review on "' . $product['product_name'] . '".');
+            (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' left a ' . $rating . '-star review on "' . $product['product_name'] . '".', '/menu/view.php?id=' . $product_id);
         }
         header("Location: /menu/view.php?id={$product_id}");
         exit;

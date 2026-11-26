@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class ProductReview {
     private PDO $pdo;
 
@@ -22,12 +24,14 @@ class ProductReview {
     }
 
     public function upsert(int $product_id, int $customer_user_id, int $rating, string $review_text): void {
-        $sql = "INSERT INTO product_reviews (product_id, customer_user_id, rating, review_text)
-                VALUES (:product_id, :customer_user_id, :rating, :review_text)
+        $review_id = IdGenerator::next($this->pdo, 'product_reviews', 'review_id');
+        $sql = "INSERT INTO product_reviews (review_id, product_id, customer_user_id, rating, review_text)
+                VALUES (:review_id, :product_id, :customer_user_id, :rating, :review_text)
                 ON CONFLICT (product_id, customer_user_id)
                 DO UPDATE SET rating = EXCLUDED.rating, review_text = EXCLUDED.review_text, created_at = NOW()";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
+            "review_id"        => $review_id,
             "product_id"       => $product_id,
             "customer_user_id" => $customer_user_id,
             "rating"           => $rating,

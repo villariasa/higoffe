@@ -45,7 +45,7 @@ if ($is_customer && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?
     } else {
         $reviewModel->upsert($cafe_id, (int) $_SESSION['user_id'], $rating, $review_text);
         if ((int) $cafe['owner_user_id'] !== (int) $_SESSION['user_id']) {
-            (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' left a ' . $rating . '-star review on ' . $cafe['cafe_name'] . '.');
+            (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' left a ' . $rating . '-star review on ' . $cafe['cafe_name'] . '.', '/cafes/view.php?id=' . $cafe_id);
         }
         header("Location: /cafes/view.php?id={$cafe_id}");
         exit;

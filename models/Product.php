@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class Product {
     private PDO $pdo;
 
@@ -73,18 +75,19 @@ class Product {
     }
 
     public function create(int $cafe_id, string $product_name, string $description, float $base_price, string $image_url) {
-        $sql = "INSERT INTO products (cafe_id, product_name, description, base_price, image_url)
-                VALUES (:cafe_id, :product_name, :description, :base_price, :image_url)
-                RETURNING product_id";
+        $product_id = IdGenerator::next($this->pdo, 'products', 'product_id');
+        $sql = "INSERT INTO products (product_id, cafe_id, product_name, description, base_price, image_url)
+                VALUES (:product_id, :cafe_id, :product_name, :description, :base_price, :image_url)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
+            "product_id"   => $product_id,
             "cafe_id"      => $cafe_id,
             "product_name" => $product_name,
             "description"  => $description,
             "base_price"   => $base_price,
             "image_url"    => $image_url,
         ]);
-        return $stmt->fetchColumn();
+        return $product_id;
     }
 
     public function update(int $product_id, string $product_name, string $description, float $base_price, string $image_url, bool $is_available) {

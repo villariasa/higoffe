@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class Post {
     private PDO $pdo;
 
@@ -92,10 +94,12 @@ class Post {
     // $product_id optionally tags the drink/menu item the post is about.
     public function create(int $author_user_id, ?int $cafe_id, string $caption, string $image_url, ?int $product_id = null, ?int $tagged_cafe_id = null, string $visibility = 'public') {
         $visibility = $visibility === 'cafe_only' ? 'cafe_only' : 'public';
-        $sql = "INSERT INTO posts (author_user_id, cafe_id, tagged_cafe_id, product_id, visibility, caption, image_url)
-                VALUES (:author_user_id, :cafe_id, :tagged_cafe_id, :product_id, :visibility, :caption, :image_url) RETURNING post_id";
+        $post_id = IdGenerator::next($this->pdo, 'posts', 'post_id');
+        $sql = "INSERT INTO posts (post_id, author_user_id, cafe_id, tagged_cafe_id, product_id, visibility, caption, image_url)
+                VALUES (:post_id, :author_user_id, :cafe_id, :tagged_cafe_id, :product_id, :visibility, :caption, :image_url)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
+            "post_id"        => $post_id,
             "author_user_id" => $author_user_id,
             "cafe_id"        => $cafe_id,
             "tagged_cafe_id" => $tagged_cafe_id,
@@ -104,7 +108,7 @@ class Post {
             "caption"        => $caption,
             "image_url"      => $image_url,
         ]);
-        return $stmt->fetchColumn();
+        return $post_id;
     }
 
     // Soft delete: the row is flagged, not destroyed — likes/comments

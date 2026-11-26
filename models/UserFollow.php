@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 // User-to-user following — separate from models/Follow.php (customer
 // follows café) on purpose: two simple tables beat one clever
 // polymorphic one.
@@ -26,9 +28,10 @@ class UserFollow {
             $stmt->execute(["follower" => $follower_user_id, "followed" => $followed_user_id]);
             return false;
         }
-        $sql = "INSERT INTO user_follows (follower_user_id, followed_user_id) VALUES (:follower, :followed)";
+        $user_follow_id = IdGenerator::next($this->pdo, 'user_follows', 'user_follow_id');
+        $sql = "INSERT INTO user_follows (user_follow_id, follower_user_id, followed_user_id) VALUES (:user_follow_id, :follower, :followed)";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(["follower" => $follower_user_id, "followed" => $followed_user_id]);
+        $stmt->execute(["user_follow_id" => $user_follow_id, "follower" => $follower_user_id, "followed" => $followed_user_id]);
         return true;
     }
 

@@ -22,7 +22,7 @@ $commentModel->create($post_id, $user_id, $comment_text);
 
 $post = (new Post($pdo))->getById($post_id);
 if ($post && (int) $post['author_user_id'] !== $user_id) {
-    (new Notification($pdo))->create((int) $post['author_user_id'], $_SESSION['full_name'] . ' commented on your post.');
+    (new Notification($pdo))->create((int) $post['author_user_id'], $_SESSION['full_name'] . ' commented on your post.', '/feed/post.php?id=' . $post_id);
 }
 
 echo json_encode([

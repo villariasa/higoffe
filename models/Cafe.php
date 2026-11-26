@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class Cafe {
     private PDO $pdo;
 
@@ -27,11 +29,12 @@ class Cafe {
     }
 
     public function create(int $owner_user_id, string $cafe_name, string $description, string $address, ?float $latitude = null, ?float $longitude = null) {
-        $sql = "INSERT INTO cafes (owner_user_id, cafe_name, description, address, latitude, longitude)
-                VALUES (:owner_user_id, :cafe_name, :description, :address, :latitude, :longitude)
-                RETURNING cafe_id";
+        $cafe_id = IdGenerator::next($this->pdo, 'cafes', 'cafe_id');
+        $sql = "INSERT INTO cafes (cafe_id, owner_user_id, cafe_name, description, address, latitude, longitude)
+                VALUES (:cafe_id, :owner_user_id, :cafe_name, :description, :address, :latitude, :longitude)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
+            "cafe_id"       => $cafe_id,
             "owner_user_id" => $owner_user_id,
             "cafe_name"     => $cafe_name,
             "description"   => $description,
@@ -39,7 +42,7 @@ class Cafe {
             "latitude"      => $latitude,
             "longitude"     => $longitude,
         ]);
-        return $stmt->fetchColumn();
+        return $cafe_id;
     }
 
     public function update(int $cafe_id, string $cafe_name, string $description, string $address, string $logo_url, string $cover_url, ?float $latitude = null, ?float $longitude = null) {

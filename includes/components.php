@@ -143,14 +143,23 @@ function render_drink_card(array $product): void {
     <?php
 }
 
-// Avatar circle with image-or-initial fallback.
-function render_avatar(?string $url, string $name, string $size_classes = 'w-9 h-9'): void {
+// Avatar circle with image-or-initial fallback. $last_active_at (a
+// TIMESTAMPTZ string from the users table) adds a Messenger/Instagram-style
+// green "active now" dot when set and recent — distinct from a
+// conversation's waiting/active/resolved status pill.
+function render_avatar(?string $url, string $name, string $size_classes = 'w-9 h-9', ?string $last_active_at = null): void {
+    $is_online = $last_active_at !== null && (time() - strtotime($last_active_at)) < 300; // 5 min
+    ?><span class="relative inline-block shrink-0 <?= $size_classes ?>"><?php
     if (!empty($url)) {
-        ?><img src="<?= htmlspecialchars($url, ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="<?= $size_classes ?> shrink-0 rounded-full object-cover"><?php
+        ?><img src="<?= htmlspecialchars($url, ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="h-full w-full rounded-full object-cover"><?php
     } else {
         $initial = mb_strtoupper(mb_substr(trim($name) !== '' ? $name : '?', 0, 1));
-        ?><div class="<?= $size_classes ?> shrink-0 rounded-full bg-coffee/10 flex items-center justify-center text-sm font-bold text-coffee"><?= htmlspecialchars($initial, ENT_QUOTES, 'UTF-8') ?></div><?php
+        ?><div class="flex h-full w-full items-center justify-center rounded-full bg-coffee/10 text-sm font-bold text-coffee"><?= htmlspecialchars($initial, ENT_QUOTES, 'UTF-8') ?></div><?php
     }
+    if ($is_online) {
+        ?><span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-green-500" title="Active now"></span><?php
+    }
+    ?></span><?php
 }
 
 // Tagged-product chip rendered inside a post card. Expects a post row

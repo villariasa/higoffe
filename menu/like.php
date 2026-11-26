@@ -17,7 +17,7 @@ if ($liked) {
     $product = (new Product($pdo))->getById($product_id);
     $cafe = $product ? (new Cafe($pdo))->getById((int) $product['cafe_id']) : null;
     if ($cafe && (int) $cafe['owner_user_id'] !== $user_id) {
-        (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' liked your menu item "' . $product['product_name'] . '".');
+        (new Notification($pdo))->create((int) $cafe['owner_user_id'], $_SESSION['full_name'] . ' liked your menu item "' . $product['product_name'] . '".', '/menu/view.php?id=' . $product_id);
     }
 }
 

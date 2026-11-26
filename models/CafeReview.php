@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/IdGenerator.php';
+
 class CafeReview {
     private PDO $pdo;
 
@@ -22,12 +24,16 @@ class CafeReview {
 
     // Insert-or-update: re-reviewing replaces the customer's prior review.
     public function upsert(int $cafe_id, int $customer_user_id, int $rating, string $review_text): void {
-        $sql = "INSERT INTO cafe_reviews (cafe_id, customer_user_id, rating, review_text)
-                VALUES (:cafe_id, :customer_user_id, :rating, :review_text)
+        // On conflict (re-review), the existing row keeps its own
+        // review_id — this generated one is only used if it's a fresh insert.
+        $review_id = IdGenerator::next($this->pdo, 'cafe_reviews', 'review_id');
+        $sql = "INSERT INTO cafe_reviews (review_id, cafe_id, customer_user_id, rating, review_text)
+                VALUES (:review_id, :cafe_id, :customer_user_id, :rating, :review_text)
                 ON CONFLICT (cafe_id, customer_user_id)
                 DO UPDATE SET rating = EXCLUDED.rating, review_text = EXCLUDED.review_text, created_at = NOW()";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
+            "review_id"        => $review_id,
             "cafe_id"          => $cafe_id,
             "customer_user_id" => $customer_user_id,
             "rating"           => $rating,

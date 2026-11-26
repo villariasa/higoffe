@@ -38,13 +38,19 @@ require_once __DIR__ . '/../includes/icons.php';
         <div class="flex items-start">
             <?php foreach ($timeline as $i => $step): ?>
                 <?php $done = $current_step !== false && $i <= $current_step; ?>
+                <?php $is_current = $i === $current_step; ?>
                 <div class="flex flex-col items-center <?= $i > 0 ? 'flex-1' : '' ?>">
                     <div class="flex w-full items-center">
                         <?php if ($i > 0): ?>
-                            <div class="h-0.5 flex-1 <?= $done ? 'bg-accent' : 'bg-stone-200' ?>"></div>
+                            <div class="h-0.5 flex-1 transition-colors duration-700 <?= $done ? 'bg-accent' : 'bg-stone-200' ?>"></div>
                         <?php endif; ?>
-                        <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold <?= $done ? 'bg-accent text-white' : 'bg-stone-200 text-stone-400' ?>">
-                            <?php if ($done): ?><?php icon('check', 'w-3 h-3'); ?><?php else: ?><?= $i + 1 ?><?php endif; ?>
+                        <span class="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-colors duration-500 <?= $done ? 'bg-accent text-white' : 'bg-stone-200 text-stone-400' ?>">
+                            <?php if ($is_current && !$is_cancelled): ?>
+                                <span class="absolute inset-0 animate-ping rounded-full bg-accent opacity-60"></span>
+                            <?php endif; ?>
+                            <span class="relative">
+                                <?php if ($done): ?><?php icon('check', 'w-3 h-3'); ?><?php else: ?><?= $i + 1 ?><?php endif; ?>
+                            </span>
                         </span>
                     </div>
                     <span class="mt-1 text-[9px] font-semibold <?= $done ? 'text-stone-800' : 'text-stone-400' ?>"><?= htmlspecialchars($short_labels[$i], ENT_QUOTES, 'UTF-8') ?></span>
