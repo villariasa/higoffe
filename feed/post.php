@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/Post.php';
+require_once __DIR__ . '/../models/PostImage.php';
 require_once __DIR__ . '/../models/PostComment.php';
 require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../includes/components.php';
@@ -19,6 +20,7 @@ if (!$post) {
 $commentModel = new PostComment($pdo);
 $comments = $commentModel->getForPost($post_id);
 $is_cafe_post = !empty($post['cafe_id']);
+$post_images = (new PostImage($pdo))->getForPost($post_id);
 
 $page_title = 'Post';
 $back_url = '/feed/index.php';
@@ -59,9 +61,7 @@ require_once __DIR__ . '/../includes/header.php';
         <?php if (!empty($post['caption'])): ?>
             <p class="mt-2 whitespace-pre-wrap text-sm text-stone-800"><?= htmlspecialchars($post['caption'], ENT_QUOTES, 'UTF-8') ?></p>
         <?php endif; ?>
-        <?php if (!empty($post['image_url'])): ?>
-            <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" decoding="async" class="lightbox-img mt-2 w-full cursor-pointer rounded-xl object-cover">
-        <?php endif; ?>
+        <?php render_post_media($post, $post_images); ?>
         <?php render_product_chip($post); ?>
 
         <div class="mt-2.5 flex items-center gap-5 border-t border-stone-100 pt-2">
@@ -81,11 +81,14 @@ require_once __DIR__ . '/../includes/header.php';
         <!-- Comments -->
         <div class="mt-3 space-y-1.5 border-t border-stone-100 pt-3">
             <?php foreach ($comments as $comment): ?>
-                <p class="text-[13px] text-stone-700">
-                    <span class="font-bold"><?= htmlspecialchars($comment['commenter_name'], ENT_QUOTES, 'UTF-8') ?></span>
-                    <?= htmlspecialchars($comment['comment_text'], ENT_QUOTES, 'UTF-8') ?>
-                    <span class="text-[10px] text-stone-400"> · <?= htmlspecialchars(time_ago($comment['created_at']), ENT_QUOTES, 'UTF-8') ?></span>
-                </p>
+                <div class="flex items-start gap-2">
+                    <?php render_avatar($comment['commenter_avatar_url'] ?? null, $comment['commenter_name'], 'w-6 h-6'); ?>
+                    <p class="text-[13px] text-stone-700">
+                        <span class="font-bold"><?= htmlspecialchars($comment['commenter_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                        <?= htmlspecialchars($comment['comment_text'], ENT_QUOTES, 'UTF-8') ?>
+                        <span class="text-[10px] text-stone-400"> · <?= htmlspecialchars(time_ago($comment['created_at']), ENT_QUOTES, 'UTF-8') ?></span>
+                    </p>
+                </div>
             <?php endforeach; ?>
             <?php if (empty($comments)): ?>
                 <p class="text-[13px] text-stone-400">No comments yet — be the first.</p>

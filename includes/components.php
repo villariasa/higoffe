@@ -186,6 +186,38 @@ function render_product_chip(array $post): void {
     <?php
 }
 
+// Post media: a plain image for a single photo, or a Facebook/Instagram-
+// style swipeable carousel (CSS scroll-snap, no JS library) when a post
+// has more than one. $images is the post_images rows for this post (can
+// be empty — falls back to the single posts.image_url cover).
+function render_post_media(array $post, array $images): void {
+    if (empty($images)) {
+        if (!empty($post['image_url'])) {
+            ?><img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="lightbox-img mt-2 max-h-80 w-full cursor-pointer rounded-xl object-cover"><?php
+        }
+        return;
+    }
+    if (count($images) === 1) {
+        ?><img src="<?= htmlspecialchars($images[0]['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="lightbox-img mt-2 max-h-80 w-full cursor-pointer rounded-xl object-cover"><?php
+        return;
+    }
+    ?>
+    <div class="post-carousel relative mt-2">
+        <div class="carousel-track no-scrollbar flex snap-x snap-mandatory gap-0 overflow-x-auto rounded-xl">
+            <?php foreach ($images as $img): ?>
+                <img src="<?= htmlspecialchars($img['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="lightbox-img h-80 w-full shrink-0 snap-center cursor-pointer object-cover">
+            <?php endforeach; ?>
+        </div>
+        <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white carousel-counter">1/<?= count($images) ?></span>
+        <div class="carousel-dots mt-1.5 flex justify-center gap-1">
+            <?php foreach ($images as $i => $img): ?>
+                <span class="h-1.5 w-1.5 rounded-full <?= $i === 0 ? 'bg-coffee' : 'bg-stone-300' ?>"></span>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php
+}
+
 // Empty state — $icon_name is a Heroicon name from includes/icons.php.
 function render_empty_state(string $icon_name, string $title, string $hint = ''): void {
     ?>

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/IdGenerator.php';
+require_once __DIR__ . '/PostImage.php';
 
 class Post {
     private PDO $pdo;
@@ -92,9 +93,14 @@ class Post {
     // $cafe_id is NULL for a personal post; set it only when the author is
     // posting as the café they own (feed/create_post.php enforces that).
     // $product_id optionally tags the drink/menu item the post is about.
-    public function create(int $author_user_id, ?int $cafe_id, string $caption, string $image_url, ?int $product_id = null, ?int $tagged_cafe_id = null, string $visibility = 'public') {
+    // $image_urls: 0 or more photos (Facebook/Instagram-style multi-photo
+    // post) — the first is kept on posts.image_url so every existing
+    // single-image render spot works unchanged; any extras go to
+    // post_images for the carousel.
+    public function create(int $author_user_id, ?int $cafe_id, string $caption, array $image_urls, ?int $product_id = null, ?int $tagged_cafe_id = null, string $visibility = 'public') {
         $visibility = $visibility === 'cafe_only' ? 'cafe_only' : 'public';
         $post_id = IdGenerator::next($this->pdo, 'posts', 'post_id');
+        $cover_image = $image_urls[0] ?? '';
         $sql = "INSERT INTO posts (post_id, author_user_id, cafe_id, tagged_cafe_id, product_id, visibility, caption, image_url)
                 VALUES (:post_id, :author_user_id, :cafe_id, :tagged_cafe_id, :product_id, :visibility, :caption, :image_url)";
         $stmt = $this->pdo->prepare($sql);
@@ -106,8 +112,13 @@ class Post {
             "product_id"     => $product_id,
             "visibility"     => $visibility,
             "caption"        => $caption,
-            "image_url"      => $image_url,
+            "image_url"      => $cover_image,
         ]);
+
+        $postImageModel = new PostImage($this->pdo);
+        foreach ($image_urls as $i => $url) {
+            $postImageModel->create($post_id, $url, $i);
+        }
         return $post_id;
     }
 

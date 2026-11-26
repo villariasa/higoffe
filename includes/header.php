@@ -152,6 +152,7 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
     <script src="/includes/ui.js" defer></script>
     <script src="/includes/location.js" defer></script>
     <script src="/includes/lightbox.js" defer></script>
+    <script src="/includes/post_carousel.js" defer></script>
     <script src="/includes/push_notify.js" defer></script>
     <script src="/includes/notif_drawer.js" defer></script>
     <!-- Driver.js: guided product tour (vanilla JS, CDN only — no build

@@ -5,7 +5,7 @@ require_once __DIR__ . '/../models/Cafe.php';
 require_once __DIR__ . '/../models/Post.php';
 require_once __DIR__ . '/../models/Product.php';
 require_once __DIR__ . '/../includes/auth_check.php';
-require_once __DIR__ . '/../includes/image_upload_field.php';
+require_once __DIR__ . '/../includes/image_upload_multi_field.php';
 require_once __DIR__ . '/../includes/components.php';
 
 // Anyone can post — a seller can share as their café (cafe_id set); a
@@ -35,8 +35,17 @@ $error = '';
 $post_as_cafe = $own_cafe !== null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $caption   = (string) trim($_POST['caption'] ?? '');
-    $image_url = (string) trim($_POST['image_url'] ?? '');
+    $caption = (string) trim($_POST['caption'] ?? '');
+    $image_urls_raw = json_decode((string) ($_POST['image_urls'] ?? '[]'), true);
+    $image_urls = [];
+    if (is_array($image_urls_raw)) {
+        foreach (array_slice($image_urls_raw, 0, 10) as $url) {
+            $url = (string) $url;
+            if ($url !== '' && Uploads::isAllowedMediaUrl($url)) {
+                $image_urls[] = $url;
+            }
+        }
+    }
     $post_as_cafe = $own_cafe !== null && isset($_POST['post_as_cafe']);
     $visibility = ($_POST['visibility'] ?? 'public') === 'cafe_only' ? 'cafe_only' : 'public';
 
@@ -49,10 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tagged_cafe_id = (int) $tag_product['cafe_id'];
     }
 
-    if ($caption === '' && $image_url === '') {
+    if ($caption === '' && empty($image_urls)) {
         $error = 'Write something or add a photo.';
-    } elseif (!Uploads::isAllowedMediaUrl($image_url)) {
-        $error = 'Invalid image URL.';
     } elseif ($visibility === 'cafe_only' && $tagged_cafe_id === 0 && !$post_as_cafe) {
         $error = 'A café-only post needs a café — tag one, or post as your café.';
     } else {
@@ -61,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (int) $_SESSION['user_id'],
             $post_as_cafe ? (int) $own_cafe['cafe_id'] : null,
             $caption,
-            $image_url,
+            $image_urls,
             $tag_product_id > 0 ? $tag_product_id : null,
             $tagged_cafe_id > 0 ? $tagged_cafe_id : null,
             $visibility
@@ -105,7 +112,8 @@ require_once __DIR__ . '/../includes/header.php';
         <?php endif; ?>
 
         <div class="rounded-2xl bg-white p-3.5">
-            <?php render_image_upload_field($upload_auth, 'image_url', 'Photo (optional)', ''); ?>
+            <label class="mb-1 block text-xs font-semibold text-stone-500">Photos (optional)</label>
+            <?php render_image_upload_multi_field($upload_auth, 'image_urls'); ?>
         </div>
 
         <div class="space-y-2.5 rounded-2xl bg-white p-3.5">
@@ -144,5 +152,5 @@ require_once __DIR__ . '/../includes/header.php';
         <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Post</button>
     </form>
 </div>
-<script src="/includes/image_upload.js"></script>
+<script src="/includes/image_upload_multi.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

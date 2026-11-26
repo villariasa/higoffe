@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/Post.php';
+require_once __DIR__ . '/../models/PostImage.php';
 require_once __DIR__ . '/../models/PostComment.php';
 require_once __DIR__ . '/../models/Cafe.php';
 require_once __DIR__ . '/../models/Product.php';
@@ -42,6 +43,9 @@ $comments_by_post = [];
 foreach ($posts as $post) {
     $comments_by_post[$post['post_id']] = $commentModel->getForPost((int) $post['post_id']);
 }
+
+$postImageModel = new PostImage($pdo);
+$images_by_post = $postImageModel->getForPosts(array_column($posts, 'post_id'));
 
 $categories = [
     ['label' => 'Coffee',   'icon' => 'storefront',   'q' => 'coffee'],
@@ -171,9 +175,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <?php if (!empty($post['caption'])): ?>
                         <p class="mt-2 whitespace-pre-wrap text-sm text-stone-800"><?= htmlspecialchars($post['caption'], ENT_QUOTES, 'UTF-8') ?></p>
                     <?php endif; ?>
-                    <?php if (!empty($post['image_url'])): ?>
-                        <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="lightbox-img mt-2 max-h-80 w-full cursor-pointer rounded-xl object-cover">
-                    <?php endif; ?>
+                    <?php render_post_media($post, $images_by_post[$post['post_id']] ?? []); ?>
                     <?php render_product_chip($post); ?>
 
                     <!-- Actions -->
