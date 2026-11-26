@@ -39,8 +39,9 @@ require_once __DIR__ . '/../includes/header.php';
 <p class="mt-0.5 text-sm text-stone-500"><?= count($users) ?> registered accounts.</p>
 
 <div class="mt-5 overflow-hidden rounded-2xl border border-stone-200 bg-white">
-    <table class="w-full text-left text-sm">
-        <thead class="border-b border-stone-200 bg-cream text-[11px] font-bold uppercase tracking-wide text-stone-400">
+  <div class="max-h-[70vh] overflow-auto">
+    <table class="w-full min-w-[640px] text-left text-sm">
+        <thead class="sticky top-0 z-10 border-b border-stone-200 bg-cream text-[11px] font-bold uppercase tracking-wide text-stone-400">
             <tr>
                 <th class="px-4 py-3">User</th>
                 <th class="hidden px-4 py-3 md:table-cell">Email</th>
@@ -95,5 +96,6 @@ require_once __DIR__ . '/../includes/header.php';
             <?php endforeach; ?>
         </tbody>
     </table>
+  </div>
 </div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
