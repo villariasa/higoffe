@@ -60,7 +60,7 @@ require_once __DIR__ . '/../includes/header.php';
             <p class="mt-2 whitespace-pre-wrap text-sm text-stone-800"><?= htmlspecialchars($post['caption'], ENT_QUOTES, 'UTF-8') ?></p>
         <?php endif; ?>
         <?php if (!empty($post['image_url'])): ?>
-            <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" decoding="async" class="mt-2 w-full rounded-xl object-cover">
+            <img src="<?= htmlspecialchars($post['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" decoding="async" class="lightbox-img mt-2 w-full cursor-pointer rounded-xl object-cover">
         <?php endif; ?>
         <?php render_product_chip($post); ?>
 

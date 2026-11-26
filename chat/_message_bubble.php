@@ -23,9 +23,7 @@ $is_mine = (int) $m['sender_user_id'] === $user_id;
                     <a href="/orders/view.php?id=<?= (int) $order['order_id'] ?>" class="text-xs font-semibold underline">View / respond</a>
                 <?php endif; ?>
             <?php elseif ($m['message_type'] === 'image' && !empty($m['image_url'])): ?>
-                <a href="<?= htmlspecialchars($m['image_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">
-                    <img src="<?= htmlspecialchars($m['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="max-h-64 max-w-full rounded-xl object-cover">
-                </a>
+                <img src="<?= htmlspecialchars($m['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="lightbox-img max-h-64 max-w-full cursor-pointer rounded-xl object-cover">
                 <?php if (!empty($m['body'])): ?>
                     <p class="mt-1"><?= htmlspecialchars($m['body'], ENT_QUOTES, 'UTF-8') ?></p>
                 <?php endif; ?>

@@ -3,9 +3,8 @@ require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../includes/password_field.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../includes/session_bootstrap.php';
+higoffe_session_start();
 
 $error = '';
 $submitted_email = '';
@@ -37,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id']   = $user['user_id'];
         $_SESSION['role']      = $user['role'];
         $_SESSION['full_name'] = $user['full_name'];
+        $_SESSION['avatar_url'] = $user['avatar_url'] ?? '';
         header("Location: /index.php");
         exit;
     }
@@ -48,8 +48,10 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="flex min-h-screen flex-col justify-center px-6 py-10">
     <div class="mb-8 text-center">
-        <p class="text-3xl font-black text-coffee">Higoffe<span class="text-accent">.</span></p>
-        <p class="mt-1 text-sm text-stone-500">Kape ta, storya ta.</p>
+        <a href="/index.php" class="inline-block">
+            <img src="/assets/images/logo.png" alt="Higoffe" class="mx-auto h-16 w-auto">
+        </a>
+        <p class="mt-3 text-sm text-stone-500">Kape ta, storya ta.</p>
     </div>
 
     <?php if ($error !== ''): ?>

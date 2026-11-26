@@ -21,7 +21,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="space-y-2">
             <?php foreach ($orders as $order): ?>
                 <div class="rounded-2xl bg-white p-3.5">
-                    <a href="/orders/view.php?id=<?= (int) $order['order_id'] ?>" class="flex items-center gap-3">
+                    <button type="button" class="order-row-toggle flex w-full items-center gap-3 text-left" data-order-id="<?= (int) $order['order_id'] ?>">
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-bold text-stone-900"><?= htmlspecialchars($order['cafe_name'], ENT_QUOTES, 'UTF-8') ?></p>
                             <p class="text-[11px] text-stone-400">Order #<?= (int) $order['order_id'] ?> · <?= htmlspecialchars(date('M j, g:i A', strtotime($order['created_at'])), ENT_QUOTES, 'UTF-8') ?></p>
@@ -45,7 +45,9 @@ require_once __DIR__ . '/../includes/header.php';
                                 <p class="mt-0.5 text-[10px] font-bold text-red-500">UNPAID</p>
                             <?php endif; ?>
                         </div>
-                    </a>
+                        <?php icon('chevron-down', 'w-4 h-4 shrink-0 text-stone-300'); ?>
+                    </button>
+                    <div class="order-detail-panel space-y-2 overflow-hidden transition-[max-height] duration-300 ease-in-out" data-order-id="<?= (int) $order['order_id'] ?>" data-open="0" style="max-height:0px"></div>
                     <?php if (in_array($order['status_label'], ['Completed', 'Cancelled'])): ?>
                         <div class="mt-2 border-t border-stone-100 pt-2">
                             <a href="/orders/reorder.php?order_id=<?= (int) $order['order_id'] ?>" class="text-xs font-bold text-coffee">↺ Reorder</a>
@@ -56,4 +58,5 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     <?php endif; ?>
 </section>
+<script src="/includes/order_toggle.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

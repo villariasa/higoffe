@@ -2,9 +2,8 @@
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/User.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../includes/session_bootstrap.php';
+higoffe_session_start();
 
 $token = (string) ($_GET['token'] ?? '');
 
@@ -24,6 +23,9 @@ $no_shell = true;
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    <a href="/index.php" class="mb-4">
+        <img src="/assets/images/logo-nav.png" alt="Higoffe" class="h-10 w-auto">
+    </a>
     <?php if ($user && !$expired): ?>
         <span class="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600"><?php icon('check-circle', 'w-9 h-9'); ?></span>
         <h1 class="mt-3 text-xl font-black text-stone-900">Email verified</h1>

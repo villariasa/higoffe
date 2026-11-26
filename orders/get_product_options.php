@@ -28,8 +28,9 @@ $sizes  = (new ProductSize($pdo))->getByProduct($product_id);
 $addons = (new ProductAddon($pdo))->getByProduct($product_id);
 
 echo json_encode([
-    'base_price' => (float) $prod['base_price'],
-    'image_url'  => $prod['image_url'] ?? '',
+    'base_price'   => (float) $prod['base_price'],
+    'image_url'    => $prod['image_url'] ?? '',
+    'product_name' => (string) $prod['product_name'],
     'sizes'      => array_map(fn($s) => [
         'size_id'     => (int)   $s['size_id'],
         'size_label'  => (string)$s['size_label'],

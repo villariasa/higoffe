@@ -34,6 +34,11 @@ $no_shell = true;
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="flex min-h-screen flex-col justify-center px-6">
+    <div class="mb-4 text-center">
+        <a href="/auth/login.php" class="inline-block">
+            <img src="/assets/images/logo-nav.png" alt="Higoffe" class="mx-auto h-10 w-auto">
+        </a>
+    </div>
     <h1 class="text-center text-xl font-black text-stone-900">Resend verification email</h1>
 
     <?php if ($submitted): ?>

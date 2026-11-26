@@ -39,6 +39,15 @@ if ($nav_role === 'customer') {
                     </span>
                     <span class="mt-0.5 text-[10px] font-semibold <?= $is_tab_active ? 'text-accent' : 'text-stone-500' ?>"><?= $tab['label'] ?></span>
                 </a>
+            <?php elseif ($tab['tour'] === 'profile'): ?>
+                <a href="<?= $tab['href'] ?>" data-tour="nav-<?= $tab['tour'] ?>" class="flex flex-col items-center justify-center gap-0.5 py-2">
+                    <?php if (!empty($_SESSION['avatar_url'])): ?>
+                        <img src="<?= htmlspecialchars($_SESSION['avatar_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" class="h-5 w-5 rounded-full object-cover <?= $is_tab_active ? 'ring-2 ring-accent' : 'opacity-80' ?>">
+                    <?php else: ?>
+                        <?php icon('user-circle', 'w-5 h-5 ' . ($is_tab_active ? 'text-accent' : 'text-stone-400')); ?>
+                    <?php endif; ?>
+                    <span class="text-[10px] font-semibold <?= $is_tab_active ? 'text-accent' : 'text-stone-500' ?>"><?= $tab['label'] ?></span>
+                </a>
             <?php else: ?>
                 <a href="<?= $tab['href'] ?>" data-tour="nav-<?= $tab['tour'] ?>" class="flex flex-col items-center justify-center gap-0.5 py-2">
                     <?php icon($tab['icon'], 'w-5 h-5 ' . ($is_tab_active ? 'text-accent' : 'text-stone-400')); ?>

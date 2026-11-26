@@ -4,9 +4,8 @@ require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../includes/mail_helpers.php';
 require_once __DIR__ . '/../includes/password_field.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../includes/session_bootstrap.php';
+higoffe_session_start();
 
 $error = '';
 $registered = false;
@@ -44,6 +43,9 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="flex min-h-screen flex-col justify-center px-6 py-10">
     <div class="mb-6 text-center">
+        <a href="/auth/login.php" class="mb-3 inline-block">
+            <img src="/assets/images/logo-nav.png" alt="Higoffe" class="mx-auto h-12 w-auto">
+        </a>
         <p class="text-2xl font-black text-coffee">Register your café</p>
         <p class="mt-1 text-sm text-stone-500">Reach café lovers, post promos, turn chats into orders.</p>
     </div>

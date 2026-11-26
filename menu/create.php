@@ -62,7 +62,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <label class="mb-1 block text-xs font-semibold text-stone-500">Base price (&#8369;)</label>
                 <input type="number" step="0.01" min="0" name="base_price" required class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
             </div>
-            <?php render_image_upload_field($upload_auth, 'image_url', 'Product photo', '', 3); ?>
+            <?php render_image_upload_field($upload_auth, 'image_url', 'Product photo', '', 3, 4 / 3); ?>
         </div>
         <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Save and continue</button>
     </form>

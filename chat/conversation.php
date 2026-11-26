@@ -215,7 +215,7 @@ require_once __DIR__ . '/../includes/header.php';
             img.src = m.image_url;
             img.loading = 'lazy';
             img.decoding = 'async';
-            img.className = 'rounded-xl max-w-full max-h-64 object-cover';
+            img.className = 'lightbox-img cursor-pointer rounded-xl max-w-full max-h-64 object-cover';
             bubble.appendChild(img);
         } else {
             bubble.textContent = m.body || '';

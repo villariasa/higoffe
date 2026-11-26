@@ -8,7 +8,11 @@
 // $max_mb mirrors the Worker's per-scope cap (avatar 2MB, product 3MB,
 // cafe 4MB, default 5MB) — this is UX-only; the Worker enforces the real
 // limit server-side regardless of what the client claims.
-function render_image_upload_field(array $auth, string $name, string $label, string $current_url = '', int $max_mb = 5): void {
+// $crop_aspect: null = free-form crop box, or a ratio like 1 (square) or
+// 16/9 (cover photos). Set to false to skip the crop step entirely (e.g.
+// payment-proof screenshots, which are evidence, not a presentational
+// photo that benefits from framing).
+function render_image_upload_field(array $auth, string $name, string $label, string $current_url = '', int $max_mb = 5, $crop_aspect = null): void {
     ?>
     <div class="image-upload-field"
          data-worker-url="<?= htmlspecialchars($auth['worker_url'], ENT_QUOTES, 'UTF-8') ?>"
@@ -16,7 +20,9 @@ function render_image_upload_field(array $auth, string $name, string $label, str
          data-expiry="<?= (int) $auth['expiry'] ?>"
          data-user-id="<?= (int) $auth['user_id'] ?>"
          data-max-mb="<?= $max_mb ?>"
-         data-scope="<?= htmlspecialchars($auth['scope'], ENT_QUOTES, 'UTF-8') ?>">
+         data-scope="<?= htmlspecialchars($auth['scope'], ENT_QUOTES, 'UTF-8') ?>"
+         <?= $crop_aspect === false ? 'data-no-crop="1"' : '' ?>
+         <?= ($crop_aspect !== false && $crop_aspect !== null) ? 'data-crop-aspect="' . htmlspecialchars((string) $crop_aspect, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
         <label class="block text-sm text-stone-600 mb-1"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></label>
         <div class="flex items-center gap-3">
             <img

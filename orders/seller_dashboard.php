@@ -40,27 +40,32 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (empty($orders)): ?>
         <?php render_empty_state('receipt', 'No "' . $active_status . '" orders'); ?>
     <?php else: ?>
-        <div class="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+        <div class="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 lg:items-start">
             <?php foreach ($orders as $order): ?>
-                <a href="/orders/view.php?id=<?= (int) $order['order_id'] ?>" class="flex items-center gap-3 rounded-2xl bg-white p-3.5 active:bg-stone-50">
-                    <?php render_avatar(null, $order['customer_name'], 'w-10 h-10'); ?>
-                    <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-bold text-stone-900"><?= htmlspecialchars($order['customer_name'], ENT_QUOTES, 'UTF-8') ?></p>
-                        <p class="text-[11px] text-stone-400">Order #<?= (int) $order['order_id'] ?> · <?= htmlspecialchars(date('M j, g:i A', strtotime($order['created_at'])), ENT_QUOTES, 'UTF-8') ?></p>
-                    </div>
-                    <div class="shrink-0 text-right">
-                        <p class="text-sm font-black text-coffee">&#8369;<?= number_format((float) $order['total_amount'], 2) ?></p>
-                        <?php if (($order['payment_status'] ?? 'unpaid') === 'confirmed'): ?>
-                            <p class="text-[10px] font-bold text-green-600">PAID</p>
-                        <?php elseif (($order['payment_status'] ?? '') === 'proof_submitted'): ?>
-                            <p class="text-[10px] font-bold text-amber-600">CHECK PROOF</p>
-                        <?php elseif ($active_status !== 'Cancelled'): ?>
-                            <p class="text-[10px] font-bold text-red-500">UNPAID</p>
-                        <?php endif; ?>
-                    </div>
-                </a>
+                <div>
+                    <button type="button" class="order-row-toggle flex w-full items-center gap-3 rounded-2xl bg-white p-3.5 text-left active:bg-stone-50" data-order-id="<?= (int) $order['order_id'] ?>">
+                        <?php render_avatar(null, $order['customer_name'], 'w-10 h-10'); ?>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-bold text-stone-900"><?= htmlspecialchars($order['customer_name'], ENT_QUOTES, 'UTF-8') ?></p>
+                            <p class="text-[11px] text-stone-400">Order #<?= (int) $order['order_id'] ?> · <?= htmlspecialchars(date('M j, g:i A', strtotime($order['created_at'])), ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
+                        <div class="shrink-0 text-right">
+                            <p class="text-sm font-black text-coffee">&#8369;<?= number_format((float) $order['total_amount'], 2) ?></p>
+                            <?php if (($order['payment_status'] ?? 'unpaid') === 'confirmed'): ?>
+                                <p class="text-[10px] font-bold text-green-600">PAID</p>
+                            <?php elseif (($order['payment_status'] ?? '') === 'proof_submitted'): ?>
+                                <p class="text-[10px] font-bold text-amber-600">CHECK PROOF</p>
+                            <?php elseif ($active_status !== 'Cancelled'): ?>
+                                <p class="text-[10px] font-bold text-red-500">UNPAID</p>
+                            <?php endif; ?>
+                        </div>
+                        <?php icon('chevron-down', 'w-4 h-4 shrink-0 text-stone-300'); ?>
+                    </button>
+                    <div class="order-detail-panel space-y-2 overflow-hidden transition-[max-height] duration-300 ease-in-out" data-order-id="<?= (int) $order['order_id'] ?>" data-open="0" style="max-height:0px"></div>
+                </div>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 </section>
+<script src="/includes/order_toggle.js"></script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

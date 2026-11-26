@@ -1,7 +1,6 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/session_bootstrap.php';
+higoffe_session_start();
 
 require_once __DIR__ . '/icons.php';
 require_once __DIR__ . '/../config/Uploads.php';
@@ -17,8 +16,11 @@ if (!headers_sent()) {
     if ($csp_worker) {
         $csp_host = (string)(parse_url($csp_worker, PHP_URL_HOST) ?? '');
     }
-    $img_src  = "img-src 'self' data:" . ($csp_host ? " https://{$csp_host}" : '');
-    $conn_src = "connect-src 'self'" . ($csp_host ? " https://{$csp_host}" : '');
+    // Nominatim (geocoding) + OSM tile servers are free, keyless services
+    // used by the location picker — both need explicit CSP allowances or
+    // the browser silently blocks the requests.
+    $img_src  = "img-src 'self' data: https://*.tile.openstreetmap.org" . ($csp_host ? " https://{$csp_host}" : '');
+    $conn_src = "connect-src 'self' https://nominatim.openstreetmap.org" . ($csp_host ? " https://{$csp_host}" : '');
     // CDNs the app bundles: Tailwind play CDN, NProgress, Turbo Drive.
     $script_cdns = "https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net";
     $style_cdns  = "https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net";
@@ -91,6 +93,10 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Higoffe</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png">
     <?php if ($media_host !== ''): ?>
         <link rel="dns-prefetch" href="https://<?= htmlspecialchars($media_host, ENT_QUOTES, 'UTF-8') ?>">
         <link rel="preconnect" href="https://<?= htmlspecialchars($media_host, ENT_QUOTES, 'UTF-8') ?>" crossorigin>
@@ -137,11 +143,20 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
     </script>
     <script src="/includes/ui.js" defer></script>
     <script src="/includes/location.js" defer></script>
+    <script src="/includes/lightbox.js" defer></script>
     <!-- Driver.js: guided product tour (vanilla JS, CDN only — no build
          step, matches how Turbo/NProgress are already loaded). -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css">
     <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.js"></script>
     <script src="/includes/tour.js" defer></script>
+    <!-- Leaflet: interactive OpenStreetMap picker for café location — free,
+         keyless, unlike Google Maps which needs a billed API key. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Cropper.js: crop step before any photo upload (profile, posts,
+         café logo/cover, products) — vanilla JS, CDN only. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
     <?php if ($is_app_user): ?>
         <script>window.HIGOFFE_USER_ID = <?= (int) $_SESSION['user_id'] ?>;</script>
     <?php endif; ?>
@@ -175,7 +190,10 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
 <?php if ($is_admin): ?>
     <!-- Admin sidebar (desktop) -->
     <aside class="sticky top-0 hidden h-screen flex-col border-r border-stone-200 bg-coffee-dark px-3 py-5 lg:flex">
-        <a href="/admin/index.php" class="px-3 text-xl font-black tracking-tight text-white">Higoffe<span class="text-accent">.</span> <span class="text-[10px] font-bold uppercase tracking-widest text-white/50">Admin</span></a>
+        <a href="/admin/index.php" class="flex items-center gap-2 px-3 py-1">
+            <img src="/assets/images/logo-nav-light.png" alt="Higoffe" class="h-6 w-auto">
+            <span class="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white/60">Admin</span>
+        </a>
         <nav class="mt-6 flex flex-1 flex-col gap-1">
             <?php foreach ($admin_nav as $item): ?>
                 <?php $is_nav_active = strpos($current_path, $item['match']) === 0; ?>
@@ -195,7 +213,10 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
         <!-- Admin mobile top bar + horizontal nav -->
         <header class="sticky top-0 z-40 border-b border-stone-200 bg-coffee-dark lg:hidden">
             <div class="flex items-center justify-between px-4 py-2.5">
-                <span class="text-base font-black tracking-tight text-white">Higoffe<span class="text-accent">.</span> <span class="text-[9px] font-bold uppercase tracking-widest text-white/50">Admin</span></span>
+                <a href="/admin/index.php" class="flex items-center gap-2">
+                    <img src="/assets/images/logo-nav-light.png" alt="Higoffe" class="h-6 w-auto">
+                    <span class="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white/60">Admin</span>
+                </a>
                 <a href="/auth/logout.php" aria-label="Log out" class="text-white/70"><?php icon('logout', 'w-5 h-5'); ?></a>
             </div>
             <nav class="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-2">
@@ -215,7 +236,9 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
          full-width top nav instead. -->
     <header class="sticky top-0 z-40 hidden border-b border-stone-200 bg-white lg:block">
         <div class="mx-auto flex max-w-[1400px] items-center gap-5 px-6 py-3">
-            <a href="/index.php" class="shrink-0 text-2xl font-black tracking-tight text-coffee">Higoffe<span class="text-accent">.</span></a>
+            <a href="/index.php" class="flex shrink-0 items-center">
+                <img src="/assets/images/logo-nav.png" alt="Higoffe" class="h-8 w-auto">
+            </a>
 
             <button type="button" class="location-chip flex shrink-0 items-center gap-1.5 rounded-xl border border-stone-200 bg-cream px-3 py-2 text-xs font-semibold text-stone-600 transition-colors hover:border-coffee" title="Click to use current location">
                 <?php icon('map-pin-solid', 'w-3.5 h-3.5 text-accent'); ?>
@@ -227,7 +250,7 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
                     <?php $is_nav_active = strpos($current_path, $item['match']) === 0; ?>
                     <a href="<?= $item['href'] ?>" data-tour="nav-<?= $item['tour'] ?>"
                        class="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors <?= $is_nav_active ? 'bg-coffee text-white' : 'text-stone-600 hover:bg-cream' ?>">
-                        <?php icon($item['icon'], 'w-4.5 h-4.5'); ?>
+                        <?php icon($item['icon'], 'w-[18px] h-[18px]'); ?>
                         <?= $item['label'] ?>
                     </a>
                 <?php endforeach; ?>
@@ -279,7 +302,9 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
         <!-- Mobile main top bar -->
         <header class="sticky top-0 z-40 border-b border-stone-200 bg-cream/95 px-4 py-2.5 backdrop-blur lg:hidden">
             <div class="flex items-center justify-between">
-                <span class="text-lg font-black tracking-tight text-coffee">Higoffe<span class="text-accent">.</span></span>
+                <a href="/index.php" class="flex items-center">
+                    <img src="/assets/images/logo-nav.png" alt="Higoffe" class="h-7 w-auto">
+                </a>
                 <div class="flex items-center gap-1">
                     <?php if ($is_app_user): ?>
                         <button type="button" class="location-chip flex items-center gap-1 rounded-full border border-stone-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-stone-600 active:opacity-80" title="Click to use current location">
@@ -291,11 +316,6 @@ if ($is_app_user && isset($pdo) && $pdo instanceof PDO) {
                             <?php if ($unread_notifications > 0): ?>
                                 <span class="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"><?= $unread_notifications > 9 ? '9+' : $unread_notifications ?></span>
                             <?php endif; ?>
-                        </a>
-                    <?php endif; ?>
-                    <?php if ($current_role): ?>
-                        <a href="/auth/logout.php" aria-label="Log out" class="flex h-9 w-9 items-center justify-center rounded-full text-stone-500 active:bg-stone-200">
-                            <?php icon('logout', 'w-5 h-5'); ?>
                         </a>
                     <?php endif; ?>
                 </div>

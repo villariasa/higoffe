@@ -28,6 +28,20 @@
             .catch(function () { /* chip keeps its current label */ });
     }
 
+    // The location banner inserts a new node at the top of <main>, which
+    // reflows everything below it — if that happens while Driver.js has
+    // just measured a spotlight position (guided tour), the highlighted
+    // hole ends up misaligned with its target ("cuts out"/vanishes). Defer
+    // the banner until any pending tour for this user has finished.
+    function tourIsPending() {
+        try {
+            if (!window.HIGOFFE_USER_ID) return false;
+            return localStorage.getItem('higoffe_tour_' + window.HIGOFFE_USER_ID + '_shell') !== '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
     function stored() {
         const lat = sessionStorage.getItem(KEY_LAT) || localStorage.getItem(KEY_LAT);
         const lng = sessionStorage.getItem(KEY_LNG) || localStorage.getItem(KEY_LNG);
@@ -126,6 +140,7 @@
     // Prominent "See cafés near you" ask banner (inspired by Foodpanda / GrabFood)
     function maybeShowAskBanner() {
         if (!isPageWantingLocation()) return;
+        if (tourIsPending()) return;
         if (stored() || sessionStorage.getItem(KEY_DISMISSED)) return;
         if (document.getElementById('location-ask-banner')) return;
 
@@ -161,6 +176,7 @@
 
     // Floating Foodpanda-style helper tooltip on the location button
     function maybeShowTooltip() {
+        if (tourIsPending()) return;
         if (stored() || sessionStorage.getItem(KEY_DISMISSED)) return;
         if (document.getElementById('location-chip-tooltip')) return;
 

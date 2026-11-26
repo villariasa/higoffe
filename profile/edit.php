@@ -15,11 +15,16 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $bio        = (string) trim($_POST['bio'] ?? '');
     $avatar_url = (string) trim($_POST['avatar_url'] ?? '');
-    if (!Uploads::isAllowedMediaUrl($avatar_url)) {
+    $full_name  = (string) trim($_POST['full_name'] ?? '');
+    if ($full_name === '') {
+        $error = 'Name is required.';
+    } elseif (!Uploads::isAllowedMediaUrl($avatar_url)) {
         $error = 'Invalid image URL.';
     } else {
-        $userModel->updateProfile((int) $_SESSION['user_id'], $bio, $avatar_url);
+        $userModel->updateProfile((int) $_SESSION['user_id'], $bio, $avatar_url, $full_name);
         $user = $userModel->getById((int) $_SESSION['user_id']);
+        $_SESSION['full_name'] = $user['full_name'];
+        $_SESSION['avatar_url'] = $user['avatar_url'] ?? '';
         $saved = true;
     }
 }
@@ -41,7 +46,11 @@ require_once __DIR__ . '/../includes/header.php';
 
     <form method="post" class="space-y-4">
         <div class="rounded-2xl bg-white p-3.5">
-            <?php render_image_upload_field($upload_auth, 'avatar_url', 'Profile photo', $user['avatar_url'] ?? '', 2); ?>
+            <?php render_image_upload_field($upload_auth, 'avatar_url', 'Profile photo', $user['avatar_url'] ?? '', 2, 1); ?>
+        </div>
+        <div class="rounded-2xl bg-white p-3.5">
+            <label class="mb-1 block text-xs font-semibold text-stone-500">Name</label>
+            <input type="text" name="full_name" required maxlength="100" value="<?= htmlspecialchars($user['full_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
         </div>
         <div class="rounded-2xl bg-white p-3.5">
             <label class="mb-1 block text-xs font-semibold text-stone-500">Bio</label>

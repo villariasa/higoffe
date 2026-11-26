@@ -59,9 +59,12 @@ require_once __DIR__ . '/../includes/header.php';
         <p class="mt-2.5 text-[13px] leading-snug text-stone-600"><?= nl2br(htmlspecialchars($profile_user['bio'], ENT_QUOTES, 'UTF-8')) ?></p>
     <?php endif; ?>
 
-    <div class="mt-3">
+    <div class="mt-3 <?= $is_own ? 'flex gap-2' : '' ?>">
         <?php if ($is_own): ?>
-            <a href="/profile/edit.php" class="block w-full rounded-xl border border-stone-300 py-2 text-center text-sm font-bold text-stone-700 active:bg-stone-50">Edit profile</a>
+            <a href="/profile/edit.php" class="flex-1 rounded-xl border border-stone-300 py-2 text-center text-sm font-bold text-stone-700 active:bg-stone-50">Edit profile</a>
+            <a href="/auth/logout.php" data-confirm="Log out of Higoffe?" class="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-stone-300 px-4 py-2 text-sm font-bold text-stone-500 active:bg-stone-50">
+                <?php icon('logout', 'w-4 h-4'); ?> Log out
+            </a>
         <?php else: ?>
             <form method="post">
                 <input type="hidden" name="action" value="toggle_follow">

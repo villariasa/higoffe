@@ -196,32 +196,58 @@ require_once __DIR__ . '/../includes/header.php';
         <script>document.addEventListener('DOMContentLoaded',function(){window.higoffeToast(<?= json_encode($error, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) ?>,'error');});</script>
     <?php endif; ?>
 
+    <!-- How ordering works — so the chat stays for actual questions, not
+         "how do I use this" friction. -->
+    <div class="flex items-center gap-3 overflow-x-auto rounded-2xl bg-white p-3 text-[11px] font-semibold text-stone-500">
+        <span class="flex shrink-0 items-center gap-1.5"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-coffee text-[10px] text-white">1</span>Tap items to add</span>
+        <span class="text-stone-300">&rarr;</span>
+        <span class="flex shrink-0 items-center gap-1.5"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-coffee text-[10px] text-white">2</span>Review your cart</span>
+        <span class="text-stone-300">&rarr;</span>
+        <span class="flex shrink-0 items-center gap-1.5"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-coffee text-[10px] text-white">3</span>Place order</span>
+    </div>
+
     <!-- Add item (AJAX, no reload) -->
     <div class="rounded-2xl bg-white p-4" id="product-selector-card">
-        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Choose item</p>
+        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Tap an item to add</p>
 
-        <!-- Product image preview -->
-        <div id="product-preview" class="mb-3 hidden">
-            <img id="product-preview-img" src="" alt="" class="h-28 w-full rounded-xl object-cover">
-        </div>
+        <?php if (empty($products)): ?>
+            <p class="text-sm text-stone-400">This café hasn't listed any menu items yet.</p>
+        <?php else: ?>
+            <div id="product-grid" class="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+                <?php foreach ($products as $p): ?>
+                    <button type="button" class="product-card flex flex-col overflow-hidden rounded-xl border-2 border-stone-200 text-left transition-colors hover:border-accent/60"
+                            data-product-id="<?= (int)$p['product_id'] ?>"
+                            data-product-name="<?= htmlspecialchars($p['product_name'], ENT_QUOTES, 'UTF-8') ?>"
+                            data-product-image="<?= htmlspecialchars($p['image_url'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                        <div class="h-24 w-full shrink-0 bg-cream">
+                            <?php if (!empty($p['image_url'])): ?>
+                                <img src="<?= htmlspecialchars($p['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="h-24 w-full object-cover">
+                            <?php else: ?>
+                                <div class="flex h-24 w-full items-center justify-center text-stone-300"><?php icon('photo', 'w-6 h-6'); ?></div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="p-2">
+                            <p class="truncate text-xs font-bold text-stone-900"><?= htmlspecialchars($p['product_name'], ENT_QUOTES, 'UTF-8') ?></p>
+                            <p class="text-[11px] font-bold text-accent">&#8369;<?= number_format((float)$p['base_price'], 2) ?></p>
+                        </div>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
 
-        <select id="product-select" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
-            <option value="">-- Select product --</option>
-            <?php foreach ($products as $p): ?>
-                <option value="<?= (int)$p['product_id'] ?>"
-                        data-base="<?= (float)$p['base_price'] ?>"
-                        <?= $prefill_product_id === (int)$p['product_id'] ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($p['product_name'], ENT_QUOTES, 'UTF-8') ?> (&#8369;<?= number_format((float)$p['base_price'], 2) ?>)
-                </option>
-            <?php endforeach; ?>
-        </select>
+        <!-- Customize panel — fills in once a product card is tapped -->
+        <div id="options-area" class="mt-3 hidden rounded-xl bg-cream p-3">
+            <div class="flex items-center gap-2.5">
+                <img id="product-preview-img" src="" alt="" class="hidden h-14 w-14 rounded-lg object-cover">
+                <p id="product-preview-name" class="text-sm font-bold text-stone-900"></p>
+            </div>
+            <div id="options-inner" class="mt-2 space-y-3"></div>
 
-        <div id="options-area" class="mt-3 space-y-3"></div>
-
-        <div id="add-item-row" class="mt-3 hidden flex items-center gap-3">
-            <label class="text-xs font-semibold text-stone-500">Qty</label>
-            <input type="number" id="qty-input" value="1" min="1" class="w-20 rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
-            <button type="button" id="add-item-btn" class="ml-auto rounded-full bg-coffee px-4 py-2 text-xs font-bold text-white active:opacity-80">Add to order</button>
+            <div id="add-item-row" class="mt-3 hidden items-center gap-3">
+                <label class="text-xs font-semibold text-stone-500">Qty</label>
+                <input type="number" id="qty-input" value="1" min="1" class="w-20 rounded-xl border border-stone-200 bg-white p-2.5 text-sm focus:border-coffee focus:outline-none">
+                <button type="button" id="add-item-btn" class="ml-auto rounded-full bg-coffee px-4 py-2 text-xs font-bold text-white active:opacity-80">Add to order</button>
+            </div>
         </div>
     </div>
 
@@ -281,50 +307,57 @@ require_once __DIR__ . '/../includes/header.php';
     const csrf     = <?= json_encode($csrf) ?>;
     const baseUrl  = '/orders';
 
-    // Product selector AJAX
-    const productSelect = document.getElementById('product-select');
-    const optionsArea   = document.getElementById('options-area');
-    const addItemRow    = document.getElementById('add-item-row');
-    const addItemBtn    = document.getElementById('add-item-btn');
-    const qtyInput      = document.getElementById('qty-input');
-    const previewDiv    = document.getElementById('product-preview');
-    const previewImg    = document.getElementById('product-preview-img');
+    // Product grid (tap-to-add, images visible) — replaces the old <select>.
+    const productGrid    = document.getElementById('product-grid');
+    const optionsArea    = document.getElementById('options-area');
+    const optionsInner    = document.getElementById('options-inner');
+    const addItemRow     = document.getElementById('add-item-row');
+    const addItemBtn     = document.getElementById('add-item-btn');
+    const qtyInput       = document.getElementById('qty-input');
+    const previewImg     = document.getElementById('product-preview-img');
+    const previewName    = document.getElementById('product-preview-name');
 
-    let currentOptions = { sizes: [], addons: [], base_price: 0 };
+    let selectedProductId = null;
+
+    // Labels/names come from seller-entered free text — never trust them
+    // into innerHTML unescaped (the exact bug class this app's coding
+    // standards specifically test for).
+    function escapeHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
 
     function pesosFormat(n) {
         return '₱' + parseFloat(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
-    productSelect.addEventListener('change', function () {
-        const pid = this.value;
-        optionsArea.innerHTML = '';
+    function loadProductOptions(pid) {
+        optionsInner.innerHTML = '';
         addItemRow.classList.add('hidden');
-        previewDiv.classList.add('hidden');
-        if (!pid) return;
+        previewImg.classList.add('hidden');
 
         fetch('/orders/get_product_options.php?product_id=' + pid, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(r => r.json())
         .then(data => {
-            currentOptions = data;
-
-            // Show image preview
+            optionsArea.classList.remove('hidden');
+            previewName.textContent = data.product_name || '';
             if (data.image_url) {
                 previewImg.src = data.image_url;
-                previewDiv.classList.remove('hidden');
+                previewImg.classList.remove('hidden');
             }
 
             // Sizes
             if (data.sizes.length) {
                 const wrap = document.createElement('div');
                 wrap.innerHTML = `<label class="mb-1 block text-xs font-semibold text-stone-500">Size</label>
-                    <select id="size-select" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
+                    <select id="size-select" class="w-full rounded-xl border border-stone-200 bg-white p-2.5 text-sm focus:border-coffee focus:outline-none">
                         <option value="">Default</option>
-                        ${data.sizes.map(s => `<option value="${s.size_id}">${s.size_label} (+${pesosFormat(s.price_addon)})</option>`).join('')}
+                        ${data.sizes.map(s => `<option value="${s.size_id}">${escapeHtml(s.size_label)} (+${pesosFormat(s.price_addon)})</option>`).join('')}
                     </select>`;
-                optionsArea.appendChild(wrap);
+                optionsInner.appendChild(wrap);
             }
 
             // Add-ons
@@ -334,25 +367,40 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="space-y-1.5">
                         ${data.addons.map(a => `<label class="flex items-center gap-2 text-sm text-stone-700">
                             <input type="checkbox" class="addon-check accent-accent" value="${a.addon_id}" data-price="${a.addon_price}">
-                            ${a.addon_label} (+${pesosFormat(a.addon_price)})
+                            ${escapeHtml(a.addon_label)} (+${pesosFormat(a.addon_price)})
                         </label>`).join('')}
                     </div>`;
-                optionsArea.appendChild(wrap);
+                optionsInner.appendChild(wrap);
             }
 
             addItemRow.classList.remove('hidden');
+            addItemRow.classList.add('flex');
+            optionsArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         })
-        .catch(() => addItemRow.classList.remove('hidden'));
-    });
+        .catch(() => { addItemRow.classList.remove('hidden'); addItemRow.classList.add('flex'); });
+    }
 
-    // Trigger prefill if product pre-selected
+    if (productGrid) {
+        productGrid.addEventListener('click', function (e) {
+            const card = e.target.closest('.product-card');
+            if (!card) return;
+            productGrid.querySelectorAll('.product-card').forEach(function (c) {
+                c.classList.remove('border-accent', 'bg-amber-50/50');
+            });
+            card.classList.add('border-accent', 'bg-amber-50/50');
+            selectedProductId = card.dataset.productId;
+            loadProductOptions(selectedProductId);
+        });
+    }
+
+    // Trigger prefill if a product was passed in from quick_order.php
     <?php if ($prefill_product_id): ?>
-    productSelect.dispatchEvent(new Event('change'));
+    document.querySelector('.product-card[data-product-id="<?= (int) $prefill_product_id ?>"]')?.click();
     <?php endif; ?>
 
     addItemBtn.addEventListener('click', function () {
-        const pid = productSelect.value;
-        if (!pid) { window.higoffeToast && window.higoffeToast('Select a product first.', 'error'); return; }
+        const pid = selectedProductId;
+        if (!pid) { window.higoffeToast && window.higoffeToast('Tap an item first.', 'error'); return; }
 
         const sizeSelect = document.getElementById('size-select');
         const size_id    = sizeSelect ? sizeSelect.value : '';
@@ -381,11 +429,14 @@ require_once __DIR__ . '/../includes/header.php';
         .then(data => {
             if (data.ok) {
                 renderCart(data.cart, data.subtotal);
-                // Reset selector
-                productSelect.value = '';
-                optionsArea.innerHTML = '';
+                // Reset the picker
+                selectedProductId = null;
+                if (productGrid) productGrid.querySelectorAll('.product-card').forEach(function (c) {
+                    c.classList.remove('border-accent', 'bg-amber-50/50');
+                });
+                optionsInner.innerHTML = '';
+                optionsArea.classList.add('hidden');
                 addItemRow.classList.add('hidden');
-                previewDiv.classList.add('hidden');
                 qtyInput.value = 1;
                 window.higoffeToast && window.higoffeToast('Item added!', 'success');
             } else {
@@ -402,10 +453,10 @@ require_once __DIR__ . '/../includes/header.php';
             list.innerHTML = '<li id="cart-empty" class="text-sm text-stone-400">No items added yet.</li>';
         } else {
             list.innerHTML = cart.map((item, i) => {
-                const addonsHtml = item.addons.map(a => ` <span class="text-stone-400">+ ${a.addon_label}</span>`).join('');
-                const sizeHtml   = item.size_label ? ` <span class="text-stone-400">(${item.size_label})</span>` : '';
+                const addonsHtml = item.addons.map(a => ` <span class="text-stone-400">+ ${escapeHtml(a.addon_label)}</span>`).join('');
+                const sizeHtml   = item.size_label ? ` <span class="text-stone-400">(${escapeHtml(item.size_label)})</span>` : '';
                 return `<li class="flex items-center justify-between gap-2 border-b border-stone-100 pb-2 text-sm" data-index="${i}">
-                    <span class="min-w-0 text-stone-700">${item.quantity}&times; ${item.product_name}${sizeHtml}${addonsHtml} — <span class="font-semibold">₱${parseFloat(item.line_total).toFixed(2)}</span></span>
+                    <span class="min-w-0 text-stone-700">${item.quantity}&times; ${escapeHtml(item.product_name)}${sizeHtml}${addonsHtml} — <span class="font-semibold">₱${parseFloat(item.line_total).toFixed(2)}</span></span>
                     <button type="button" class="shrink-0 text-xs font-semibold text-red-500" onclick="removeItem(${i})">Remove</button>
                 </li>`;
             }).join('');

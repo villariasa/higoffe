@@ -61,7 +61,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <form method="post" class="space-y-3">
         <div class="rounded-2xl bg-white p-4">
-            <?php render_image_upload_field($upload_auth, 'proof_url', 'Payment screenshot', ''); ?>
+            <?php render_image_upload_field($upload_auth, 'proof_url', 'Payment screenshot', '', 5, false); ?>
         </div>
         <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Submit</button>
     </form>

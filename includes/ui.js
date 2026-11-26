@@ -108,6 +108,20 @@ window.higoffeToast = function (message, type) {
             form.requestSubmit ? form.requestSubmit() : form.submit();
         });
     }, true);
+
+    // Same pattern for plain links (e.g. "Log out") — forms aren't always
+    // the right element for a single navigating action.
+    document.addEventListener('click', function (e) {
+        const link = e.target.closest('a[data-confirm]');
+        if (!link) return;
+        if (link.dataset.confirmArmed === '1') { delete link.dataset.confirmArmed; return; }
+
+        e.preventDefault();
+        askConfirm(link.dataset.confirm, function () {
+            link.dataset.confirmArmed = '1';
+            link.click();
+        });
+    }, true);
 })();
 
 // ---- Inline report-reason (replaces window.prompt) --------------------

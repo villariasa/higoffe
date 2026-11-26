@@ -48,6 +48,15 @@ require_once __DIR__ . '/../includes/header.php';
     <a href="/cafes/profile.php" class="shrink-0 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-[11px] font-bold text-stone-600">Edit café</a>
 </div>
 
+<!-- How this works — so customers rarely need to ask in chat -->
+<div class="mt-3 flex items-center gap-3 overflow-x-auto px-4 text-[11px] font-semibold text-stone-500 lg:px-6">
+    <span class="flex shrink-0 items-center gap-1.5"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-coffee text-[10px] text-white">1</span>Accept an inquiry</span>
+    <span class="text-stone-300">&rarr;</span>
+    <span class="flex shrink-0 items-center gap-1.5"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-coffee text-[10px] text-white">2</span>Chat — customer sends the order</span>
+    <span class="text-stone-300">&rarr;</span>
+    <span class="flex shrink-0 items-center gap-1.5"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-coffee text-[10px] text-white">3</span>Update status in Orders</span>
+</div>
+
 <!-- This week -->
 <div id="queue-stats" class="mt-4 grid grid-cols-2 gap-2 px-4 lg:gap-3 lg:px-6">
     <div class="rounded-2xl bg-white p-3.5 lg:border lg:border-stone-100">

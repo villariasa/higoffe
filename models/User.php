@@ -36,10 +36,10 @@ class User {
         return $stmt->fetchColumn();
     }
 
-    public function updateProfile(int $user_id, string $bio, string $avatar_url): void {
-        $sql = "UPDATE users SET bio = :bio, avatar_url = :avatar_url WHERE user_id = :user_id";
+    public function updateProfile(int $user_id, string $bio, string $avatar_url, string $full_name): void {
+        $sql = "UPDATE users SET bio = :bio, avatar_url = :avatar_url, full_name = :full_name WHERE user_id = :user_id";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(["bio" => $bio, "avatar_url" => $avatar_url, "user_id" => $user_id]);
+        $stmt->execute(["bio" => $bio, "avatar_url" => $avatar_url, "full_name" => $full_name, "user_id" => $user_id]);
     }
 
     public function setVerificationToken(int $user_id, string $token, string $expires_at): void {

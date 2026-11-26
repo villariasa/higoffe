@@ -68,7 +68,7 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
             <div>
                 <label class="mb-1 block text-xs font-semibold text-stone-500">Pin your café's location</label>
-                <p class="mb-2 text-[10px] text-stone-400">Type the city or area your café is in — we'll look it up and drop a pin automatically, so your location data stays accurate for Nearby Cafés.</p>
+                <p class="mb-2 text-[10px] text-stone-400">Search a city, use your current location, or just click/drag the pin on the map — handy when a PC's auto-detected location is off because of a VPN, firewall, or private network.</p>
 
                 <div class="flex gap-2">
                     <input type="text" id="input-city" placeholder="e.g. Lahug, Cebu City" class="w-full rounded-xl border border-stone-200 bg-cream p-2.5 text-sm focus:border-coffee focus:outline-none">
@@ -78,16 +78,17 @@ require_once __DIR__ . '/../includes/header.php';
                     <?php icon('map-pin-solid', 'w-3 h-3'); ?> Or use my current location
                 </button>
 
-                <div id="map-preview-wrap" class="mt-2.5 overflow-hidden rounded-xl border border-stone-200 <?= ($cafe['latitude'] ?? null) !== null ? '' : 'hidden' ?>">
-                    <iframe id="map-preview" class="h-44 w-full" style="border:0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <div id="map-preview-wrap" class="mt-2.5 overflow-hidden rounded-xl border border-stone-200">
+                    <div id="pin-map" style="height:220px"></div>
                 </div>
-                <p id="map-preview-label" class="mt-1 text-[11px] font-semibold text-stone-600"><?= htmlspecialchars($cafe['address'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+                <p class="mt-1 text-[10px] text-stone-400">Click anywhere on the map, or drag the pin, to set the exact spot.</p>
+                <p id="map-preview-label" class="mt-0.5 text-[11px] font-semibold text-stone-600"><?= htmlspecialchars($cafe['address'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
 
                 <input type="hidden" name="latitude" id="input-lat" value="<?= htmlspecialchars($cafe['latitude'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                 <input type="hidden" name="longitude" id="input-lng" value="<?= htmlspecialchars($cafe['longitude'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
             </div>
-            <?php render_image_upload_field($upload_auth, 'logo_url', 'Logo', $cafe['logo_url'] ?? '', 4); ?>
-            <?php render_image_upload_field($upload_auth, 'cover_url', 'Cover photo', $cafe['cover_url'] ?? '', 4); ?>
+            <?php render_image_upload_field($upload_auth, 'logo_url', 'Logo', $cafe['logo_url'] ?? '', 4, 1); ?>
+            <?php render_image_upload_field($upload_auth, 'cover_url', 'Cover photo', $cafe['cover_url'] ?? '', 4, 16 / 9); ?>
         </div>
         <button type="submit" class="w-full rounded-xl bg-accent py-3 text-sm font-bold text-white active:opacity-80">Save</button>
     </form>
@@ -101,65 +102,84 @@ require_once __DIR__ . '/../includes/header.php';
 <script src="/includes/image_upload.js"></script>
 <script src="/includes/location.js"></script>
 <script>
-// Drops a pin + fills the hidden lat/lng inputs from a resolved place.
-// Uses OpenStreetMap's free Nominatim (geocoding) and the free embeddable
-// OSM iframe (map pin) — no API key, no paid service, matches the
-// no-Composer/no-SDK coding standards.
-function showMapPin(lat, lng, label) {
-    document.getElementById('input-lat').value = lat;
-    document.getElementById('input-lng').value = lng;
-    const delta = 0.01;
-    const bbox = [lng - delta, lat - delta, lng + delta, lat + delta].join(',');
-    document.getElementById('map-preview').src =
-        'https://www.openstreetmap.org/export/embed.html?bbox=' + encodeURIComponent(bbox) +
-        '&layer=mapnik&marker=' + lat + ',' + lng;
-    document.getElementById('map-preview-wrap').classList.remove('hidden');
-    if (label) document.getElementById('map-preview-label').textContent = label;
-}
+// Interactive Leaflet + OpenStreetMap picker — free, keyless (Google Maps
+// would need a billed API key). Three ways to set the pin, since none of
+// them is reliable alone: geocode a typed city, browser geolocation (can
+// be wrong behind a VPN/firewall/private network), or just click/drag
+// directly on the map as a manual override. Wrapped in an IIFE because
+// this script re-executes on every Turbo visit to this page — top-level
+// `let`/`const` would throw "already declared" on a second visit.
+(function () {
+    const latInput = document.getElementById('input-lat');
+    const lngInput = document.getElementById('input-lng');
+    const startLat = parseFloat(latInput.value) || 10.3157;
+    const startLng = parseFloat(lngInput.value) || 123.8854; // Cebu City fallback
 
-document.getElementById('btn-geocode')?.addEventListener('click', function () {
-    const btn = this;
-    const city = document.getElementById('input-city').value.trim();
-    if (!city) {
-        window.higoffeToast('Type a city or area first.', 'warning');
-        return;
+    const map = L.map('pin-map').setView([startLat, startLng], latInput.value ? 15 : 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    const marker = L.marker([startLat, startLng], { draggable: true }).addTo(map);
+
+    function setPin(lat, lng, label) {
+        latInput.value = lat;
+        lngInput.value = lng;
+        marker.setLatLng([lat, lng]);
+        map.setView([lat, lng], Math.max(map.getZoom(), 15));
+        if (label) document.getElementById('map-preview-label').textContent = label;
     }
-    const original = btn.textContent;
-    btn.textContent = 'Finding...';
-    btn.disabled = true;
 
-    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ph&q=' + encodeURIComponent(city))
-        .then(function (res) { return res.json(); })
-        .then(function (results) {
-            btn.textContent = original;
-            btn.disabled = false;
-            if (!results || !results.length) {
-                window.higoffeToast('No matching location found — try a different area name.', 'warning');
-                return;
-            }
-            const r = results[0];
-            showMapPin(parseFloat(r.lat), parseFloat(r.lon), r.display_name);
-            const addressInput = document.querySelector('input[name="address"]');
-            if (addressInput && !addressInput.value) addressInput.value = r.display_name;
-            window.higoffeToast('Location pinned. Check the map and save.', 'success');
-        })
-        .catch(function () {
-            btn.textContent = original;
-            btn.disabled = false;
-            window.higoffeToast('Could not reach the location service — try again.', 'error');
-        });
-});
-
-document.getElementById('btn-use-location')?.addEventListener('click', function () {
-    const btn = this;
-    const originalText = btn.innerHTML;
-    btn.textContent = 'Detecting...';
-    window.higoffeGetLocation(function (lat, lng) {
-        btn.innerHTML = originalText;
-        showMapPin(parseFloat(lat), parseFloat(lng), null);
-        window.higoffeToast('Current location pinned.', 'success');
+    marker.on('dragend', function () {
+        const pos = marker.getLatLng();
+        setPin(pos.lat, pos.lng, null);
     });
-});
+    map.on('click', function (e) { setPin(e.latlng.lat, e.latlng.lng, null); });
+
+    document.getElementById('btn-geocode')?.addEventListener('click', function () {
+        const btn = this;
+        const city = document.getElementById('input-city').value.trim();
+        if (!city) {
+            window.higoffeToast('Type a city or area first.', 'warning');
+            return;
+        }
+        const original = btn.textContent;
+        btn.textContent = 'Finding...';
+        btn.disabled = true;
+
+        fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ph&q=' + encodeURIComponent(city))
+            .then(function (res) { return res.json(); })
+            .then(function (results) {
+                btn.textContent = original;
+                btn.disabled = false;
+                if (!results || !results.length) {
+                    window.higoffeToast('No matching location found — try a different area name.', 'warning');
+                    return;
+                }
+                const r = results[0];
+                setPin(parseFloat(r.lat), parseFloat(r.lon), r.display_name);
+                const addressInput = document.querySelector('input[name="address"]');
+                if (addressInput && !addressInput.value) addressInput.value = r.display_name;
+                window.higoffeToast('Location pinned. Check the map and save.', 'success');
+            })
+            .catch(function () {
+                btn.textContent = original;
+                btn.disabled = false;
+                window.higoffeToast('Could not reach the location service — try again.', 'error');
+            });
+    });
+
+    document.getElementById('btn-use-location')?.addEventListener('click', function () {
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.textContent = 'Detecting...';
+        window.higoffeGetLocation(function (lat, lng) {
+            btn.innerHTML = originalText;
+            setPin(parseFloat(lat), parseFloat(lng), null);
+            window.higoffeToast('Current location pinned.', 'success');
+        });
+    });
+})();
 </script>
 <script>
 if (window.HigoffeTour && window.HigoffeTour.isDone('shell')) {

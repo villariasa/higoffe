@@ -5,9 +5,8 @@
 //   require_role('admin');          // single role
 //   require_role(['seller','admin']); // multiple roles allowed
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/session_bootstrap.php';
+higoffe_session_start();
 
 if (!isset($_SESSION['user_id'])) {
     // Assumes the app is deployed at the web root. If deployed in a
