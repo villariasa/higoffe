@@ -202,13 +202,21 @@ function render_post_media(array $post, array $images): void {
         return;
     }
     ?>
-    <div class="post-carousel relative mt-2">
+    <div class="post-carousel group relative mt-2">
         <div class="carousel-track no-scrollbar flex snap-x snap-mandatory gap-0 overflow-x-auto rounded-xl">
             <?php foreach ($images as $img): ?>
                 <img src="<?= htmlspecialchars($img['image_url'], ENT_QUOTES, 'UTF-8') ?>" alt="" loading="lazy" decoding="async" class="lightbox-img h-80 w-full shrink-0 snap-center cursor-pointer object-cover">
             <?php endforeach; ?>
         </div>
         <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white carousel-counter">1/<?= count($images) ?></span>
+        <!-- Desktop has no touch swipe — mouse users need clickable arrows.
+             Hidden on mobile (swipe already works there); fade in on hover. -->
+        <button type="button" class="carousel-prev absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100 lg:flex" aria-label="Previous photo">
+            <?php icon('chevron-left', 'w-4 h-4'); ?>
+        </button>
+        <button type="button" class="carousel-next absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100 lg:flex" aria-label="Next photo">
+            <?php icon('chevron-right', 'w-4 h-4'); ?>
+        </button>
         <div class="carousel-dots mt-1.5 flex justify-center gap-1">
             <?php foreach ($images as $i => $img): ?>
                 <span class="h-1.5 w-1.5 rounded-full <?= $i === 0 ? 'bg-coffee' : 'bg-stone-300' ?>"></span>

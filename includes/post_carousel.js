@@ -18,6 +18,16 @@
                 });
                 if (counter) counter.textContent = (index + 1) + '/' + total;
             }, { passive: true });
+
+            // Desktop has no touch swipe — these arrows are the mouse
+            // equivalent, hidden on mobile where swiping already works.
+            const prevBtn = car.querySelector('.carousel-prev');
+            const nextBtn = car.querySelector('.carousel-next');
+            function step(dir) {
+                track.scrollBy({ left: dir * track.clientWidth, behavior: 'smooth' });
+            }
+            if (prevBtn) prevBtn.addEventListener('click', function () { step(-1); });
+            if (nextBtn) nextBtn.addEventListener('click', function () { step(1); });
         });
     }
     document.addEventListener('DOMContentLoaded', wire);
