@@ -25,4 +25,8 @@ if ($post && (int) $post['author_user_id'] !== $user_id) {
     (new Notification($pdo))->create((int) $post['author_user_id'], $_SESSION['full_name'] . ' commented on your post.');
 }
 
-echo json_encode(["success" => true, "commenter_name" => $_SESSION['full_name']]);
+echo json_encode([
+    "success" => true,
+    "commenter_name" => $_SESSION['full_name'],
+    "commenter_avatar_url" => $_SESSION['avatar_url'] ?? '',
+]);

@@ -204,10 +204,13 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="comment-section mt-1 hidden" data-post-id="<?= (int) $post['post_id'] ?>">
                         <div class="comment-list space-y-1.5 pt-1" data-post-id="<?= (int) $post['post_id'] ?>">
                             <?php foreach ($comments_by_post[$post['post_id']] as $comment): ?>
-                                <p class="text-[13px] text-stone-700">
-                                    <span class="font-bold"><?= htmlspecialchars($comment['commenter_name'], ENT_QUOTES, 'UTF-8') ?></span>
-                                    <?= htmlspecialchars($comment['comment_text'], ENT_QUOTES, 'UTF-8') ?>
-                                </p>
+                                <div class="flex items-start gap-2">
+                                    <?php render_avatar($comment['commenter_avatar_url'] ?? null, $comment['commenter_name'], 'w-6 h-6'); ?>
+                                    <p class="text-[13px] text-stone-700">
+                                        <span class="font-bold"><?= htmlspecialchars($comment['commenter_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                        <?= htmlspecialchars($comment['comment_text'], ENT_QUOTES, 'UTF-8') ?>
+                                    </p>
+                                </div>
                             <?php endforeach; ?>
                         </div>
                         <form class="comment-form mt-2 flex gap-2" data-post-id="<?= (int) $post['post_id'] ?>">
@@ -352,6 +355,23 @@ document.querySelectorAll('.comment-form').forEach(function (form) {
         const data = await res.json();
         if (data.success) {
             const list = document.querySelector('.comment-list[data-post-id="' + form.dataset.postId + '"]');
+            const row = document.createElement('div');
+            row.className = 'flex items-start gap-2';
+
+            if (data.commenter_avatar_url) {
+                const img = document.createElement('img');
+                img.src = data.commenter_avatar_url;
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                img.className = 'w-6 h-6 shrink-0 rounded-full object-cover';
+                row.appendChild(img);
+            } else {
+                const initial = document.createElement('div');
+                initial.className = 'w-6 h-6 shrink-0 rounded-full bg-coffee/10 flex items-center justify-center text-[11px] font-bold text-coffee';
+                initial.textContent = (data.commenter_name || '?').trim().charAt(0).toUpperCase();
+                row.appendChild(initial);
+            }
+
             const p = document.createElement('p');
             p.className = 'text-[13px] text-stone-700';
             const strong = document.createElement('span');
@@ -359,7 +379,9 @@ document.querySelectorAll('.comment-form').forEach(function (form) {
             strong.textContent = data.commenter_name + ' ';
             p.appendChild(strong);
             p.appendChild(document.createTextNode(text));
-            list.appendChild(p);
+            row.appendChild(p);
+
+            list.appendChild(row);
             input.value = '';
         }
     });
