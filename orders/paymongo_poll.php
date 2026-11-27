@@ -29,6 +29,7 @@ if ($intentId !== '' && PayMongo::isConfigured()) {
     if ($res['ok']) {
         $status = (string) ($res['data']['attributes']['status'] ?? '');
         if ($status === 'succeeded') {
+            unset($_SESSION['paymongo_qr_' . $order_id], $_SESSION['paymongo_intent_' . $order_id]);
             if ($orderModel->confirmOnlinePayment($order_id)) {
                 $messageModel = new Message($pdo);
                 $messageModel->createSystem((int) $order['conversation_id'], (int) $_SESSION['user_id'], 'Online payment confirmed via QR Ph.');

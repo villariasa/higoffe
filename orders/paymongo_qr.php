@@ -26,6 +26,7 @@ if (!$res['ok']) {
 }
 
 $_SESSION['paymongo_intent_' . $order_id] = $res['intent_id'];
+$_SESSION['paymongo_qr_' . $order_id] = $res['qr_image'];
 
 echo json_encode([
     'ok' => true,

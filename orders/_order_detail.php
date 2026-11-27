@@ -92,33 +92,54 @@ require_once __DIR__ . '/../config/PayMongo.php';
                 </p>
             <?php endif; ?>
             <?php if (PayMongo::isConfigured()): ?>
+                <?php $saved_qr = (string) ($_SESSION['paymongo_qr_' . $order_id] ?? ''); ?>
                 <div id="higoffe-qrph-box-<?= (int) $order_id ?>" class="mb-4 space-y-2.5">
                     <button
                         type="button"
+                        data-qrph-order="<?= (int) $order_id ?>"
                         id="higoffe-qrph-btn-<?= (int) $order_id ?>"
-                        class="w-full rounded-xl bg-stone-900 py-2.5 text-sm font-bold text-white transition hover:bg-stone-800 active:opacity-80 disabled:opacity-50"
+                        class="<?= $saved_qr !== '' ? 'hidden ' : '' ?>w-full rounded-xl bg-stone-900 py-2.5 text-sm font-bold text-white transition hover:bg-stone-800 active:opacity-80 disabled:opacity-50"
                     >
                         Pay via QR Ph (GCash / Maya / Bank)
                     </button>
-                    <div id="higoffe-qrph-panel-<?= (int) $order_id ?>" class="hidden rounded-xl border border-stone-200 bg-stone-50 p-4 text-center">
+                    <div id="higoffe-qrph-panel-<?= (int) $order_id ?>" class="<?= $saved_qr !== '' ? '' : 'hidden ' ?>rounded-xl border border-stone-200 bg-stone-50 p-4 text-center">
                         <p class="text-xs font-bold uppercase tracking-wide text-stone-500">Scan to pay &#8369;<?= number_format((float) $order['total_amount'], 2) ?></p>
-                        <img id="higoffe-qrph-img-<?= (int) $order_id ?>" src="" alt="QR Ph Code" class="mx-auto mt-3 h-52 w-52 rounded-lg border border-stone-200 bg-white p-2 object-contain" />
+                        <img id="higoffe-qrph-img-<?= (int) $order_id ?>" src="<?= htmlspecialchars($saved_qr, ENT_QUOTES, 'UTF-8') ?>" alt="QR Ph Code" class="mx-auto mt-3 h-52 w-52 rounded-lg border border-stone-200 bg-white p-2 object-contain" />
                         <p class="mt-2.5 text-[11px] text-stone-500">Open GCash, Maya, or your banking app and scan this QR Ph code. Waiting for payment confirmation...</p>
                     </div>
                     <p id="higoffe-qrph-err-<?= (int) $order_id ?>" class="hidden rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-600"></p>
                 </div>
                 <script>
                 (function () {
-                    var oid = <?= (int) $order_id ?>;
-                    var btn = document.getElementById('higoffe-qrph-btn-' + oid);
-                    var panel = document.getElementById('higoffe-qrph-panel-' + oid);
-                    var img = document.getElementById('higoffe-qrph-img-' + oid);
-                    var errBox = document.getElementById('higoffe-qrph-err-' + oid);
-                    if (!btn || btn.dataset.bound) return;
-                    btn.dataset.bound = '1';
-                    var pollTimer = null;
-
-                    btn.addEventListener('click', function () {
+                    if (!window.__higoffeQrPhPolls) window.__higoffeQrPhPolls = {};
+                    function startPoll(oid) {
+                        if (window.__higoffeQrPhPolls[oid]) return;
+                        window.__higoffeQrPhPolls[oid] = setInterval(function () {
+                            fetch('/orders/paymongo_poll.php?id=' + oid)
+                                .then(function (r) { return r.json(); })
+                                .then(function (p) {
+                                    if (p.paid) {
+                                        clearInterval(window.__higoffeQrPhPolls[oid]);
+                                        delete window.__higoffeQrPhPolls[oid];
+                                        window.location.href = '/orders/view.php?id=' + oid;
+                                    }
+                                })
+                                .catch(function () {});
+                        }, 3000);
+                    }
+                    <?php if ($saved_qr !== ''): ?>
+                    startPoll(<?= (int) $order_id ?>);
+                    <?php endif; ?>
+                    if (window.__higoffeQrPhBound) return;
+                    window.__higoffeQrPhBound = true;
+                    document.addEventListener('click', function (ev) {
+                        var btn = ev.target && ev.target.closest ? ev.target.closest('[data-qrph-order]') : null;
+                        if (!btn) return;
+                        var oid = btn.getAttribute('data-qrph-order');
+                        var panel = document.getElementById('higoffe-qrph-panel-' + oid);
+                        var img = document.getElementById('higoffe-qrph-img-' + oid);
+                        var errBox = document.getElementById('higoffe-qrph-err-' + oid);
+                        if (!panel || !img || !errBox) return;
                         errBox.classList.add('hidden');
                         btn.disabled = true;
                         btn.textContent = 'Generating QR Ph...';
@@ -133,19 +154,7 @@ require_once __DIR__ . '/../config/PayMongo.php';
                                 img.src = data.qr_image;
                                 panel.classList.remove('hidden');
                                 btn.classList.add('hidden');
-                                if (!pollTimer) {
-                                    pollTimer = setInterval(function () {
-                                        fetch('/orders/paymongo_poll.php?id=' + oid)
-                                            .then(function (r) { return r.json(); })
-                                            .then(function (p) {
-                                                if (p.paid) {
-                                                    clearInterval(pollTimer);
-                                                    window.location.href = '/orders/view.php?id=' + oid;
-                                                }
-                                            })
-                                            .catch(function () {});
-                                    }, 3000);
-                                }
+                                startPoll(oid);
                             })
                             .catch(function (e) {
                                 btn.disabled = false;
