@@ -27,6 +27,10 @@ class PayMongo {
         return self::secretKey() !== '';
     }
 
+    public static function isTestMode(): bool {
+        return str_starts_with(self::secretKey(), 'sk_test_');
+    }
+
     public static function baseUrl(): string {
         $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')

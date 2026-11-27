@@ -106,6 +106,15 @@ require_once __DIR__ . '/../config/PayMongo.php';
                         <p class="text-xs font-bold uppercase tracking-wide text-stone-500">Scan to pay &#8369;<?= number_format((float) $order['total_amount'], 2) ?></p>
                         <img id="higoffe-qrph-img-<?= (int) $order_id ?>" src="<?= htmlspecialchars($saved_qr, ENT_QUOTES, 'UTF-8') ?>" alt="QR Ph Code" class="mx-auto mt-3 h-52 w-52 rounded-lg border border-stone-200 bg-white p-2 object-contain" />
                         <p class="mt-2.5 text-[11px] text-stone-500">Open GCash, Maya, or your banking app and scan this QR Ph code. Waiting for payment confirmation...</p>
+                        <?php if (PayMongo::isTestMode()): ?>
+                            <button
+                                type="button"
+                                data-qrph-sim="<?= (int) $order_id ?>"
+                                class="mt-3 w-full rounded-lg border border-amber-300 bg-amber-50 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 active:opacity-80 disabled:opacity-50"
+                            >
+                                Test Mode: Simulate QR Payment
+                            </button>
+                        <?php endif; ?>
                     </div>
                     <p id="higoffe-qrph-err-<?= (int) $order_id ?>" class="hidden rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-600"></p>
                 </div>
@@ -133,6 +142,30 @@ require_once __DIR__ . '/../config/PayMongo.php';
                     if (window.__higoffeQrPhBound) return;
                     window.__higoffeQrPhBound = true;
                     document.addEventListener('click', function (ev) {
+                        var simBtn = ev.target && ev.target.closest ? ev.target.closest('[data-qrph-sim]') : null;
+                        if (simBtn) {
+                            var soid = simBtn.getAttribute('data-qrph-sim');
+                            simBtn.disabled = true;
+                            simBtn.textContent = 'Confirming test payment...';
+                            var sfd = new FormData();
+                            sfd.append('order_id', String(soid));
+                            fetch('/orders/paymongo_test_simulate.php', { method: 'POST', body: sfd })
+                                .then(function (r) { return r.json(); })
+                                .then(function (d) {
+                                    if (d.paid) {
+                                        if (window.__higoffeQrPhPolls[soid]) {
+                                            clearInterval(window.__higoffeQrPhPolls[soid]);
+                                            delete window.__higoffeQrPhPolls[soid];
+                                        }
+                                        window.location.href = '/orders/view.php?id=' + soid;
+                                    }
+                                })
+                                .catch(function () {
+                                    simBtn.disabled = false;
+                                    simBtn.textContent = 'Test Mode: Simulate QR Payment';
+                                });
+                            return;
+                        }
                         var btn = ev.target && ev.target.closest ? ev.target.closest('[data-qrph-order]') : null;
                         if (!btn) return;
                         var oid = btn.getAttribute('data-qrph-order');
