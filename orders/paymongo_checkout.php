@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../config/PayMongo.php';
 require_once __DIR__ . '/../models/Order.php';
+require_once __DIR__ . '/../models/OrderItem.php';
 require_once __DIR__ . '/../includes/auth_check.php';
 require_role('customer');
 
@@ -20,7 +21,7 @@ if (!PayMongo::isConfigured()) {
     exit;
 }
 
-$items = $orderModel->getItems($order_id);
+$items = (new OrderItem($pdo))->getForOrder($order_id);
 $baseUrl = PayMongo::baseUrl();
 $returnUrl = "{$baseUrl}/orders/paymongo_return.php?id={$order_id}";
 $cancelUrl = "{$baseUrl}/orders/view.php?id={$order_id}";
