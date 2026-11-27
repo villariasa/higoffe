@@ -7,6 +7,7 @@
 // the inline expand-in-place panel on the order list pages) — one copy of
 // the actual order logic instead of three.
 require_once __DIR__ . '/../includes/icons.php';
+require_once __DIR__ . '/../config/PayMongo.php';
 ?>
 <!-- Quick header + Chat link -->
 <div class="flex items-center justify-between rounded-2xl bg-white p-3.5">
@@ -85,6 +86,24 @@ require_once __DIR__ . '/../includes/icons.php';
     <p class="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Payment</p>
     <?php if ($order['payment_status'] === 'unpaid'): ?>
         <?php if ($role === 'customer' && $upload_auth): ?>
+            <?php if (!empty($_GET['pay_error'])): ?>
+                <p class="mb-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+                    <?= htmlspecialchars((string) $_GET['pay_error'], ENT_QUOTES, 'UTF-8') ?>
+                </p>
+            <?php endif; ?>
+            <?php if (PayMongo::isConfigured()): ?>
+                <form method="post" action="/orders/paymongo_checkout.php" class="mb-4">
+                    <input type="hidden" name="order_id" value="<?= (int) $order_id ?>">
+                    <button type="submit" class="w-full rounded-xl bg-stone-900 py-2.5 text-sm font-bold text-white transition hover:bg-stone-800 active:opacity-80">
+                        Pay online (GCash / Maya / QR Ph / Card)
+                    </button>
+                </form>
+                <div class="relative mb-4 flex items-center">
+                    <div class="flex-grow border-t border-stone-200"></div>
+                    <span class="mx-3 shrink text-[11px] font-semibold uppercase tracking-wide text-stone-400">or upload proof</span>
+                    <div class="flex-grow border-t border-stone-200"></div>
+                </div>
+            <?php endif; ?>
             <form method="post" action="/orders/submit_payment.php" class="space-y-3">
                 <input type="hidden" name="order_id" value="<?= (int) $order_id ?>">
                 <?php render_image_upload_field($upload_auth, 'proof_url', 'Upload payment screenshot (GCash / bank transfer)', '', 5, false); ?>

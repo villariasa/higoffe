@@ -117,6 +117,15 @@ class Order {
         return $stmt->rowCount() === 1;
     }
 
+    public function confirmOnlinePayment(int $order_id): bool {
+        $sql = "UPDATE orders
+                SET payment_status = 'confirmed', updated_at = NOW()
+                WHERE order_id = :order_id AND payment_status IN ('unpaid', 'proof_submitted')";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(["order_id" => $order_id]);
+        return $stmt->rowCount() === 1;
+    }
+
     // Seller-facing mini summary (queue dashboard): completed orders +
     // revenue for ONE café over the last N days.
     public function getCafeSalesSummary(int $cafe_id, int $days = 7): array {
