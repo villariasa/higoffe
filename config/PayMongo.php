@@ -104,6 +104,82 @@ class PayMongo {
         return self::request('GET', 'https://api.paymongo.com/v1/checkout_sessions/' . rawurlencode($sessionId));
     }
 
+    public static function createQrPhIntent(array $order): array {
+        $secret = self::secretKey();
+        if ($secret === '') {
+            return ['ok' => false, 'error' => 'PayMongo secret key is not configured.'];
+        }
+
+        $orderId = (int) $order['order_id'];
+        $amountCentavos = max(100, (int) round(((float) $order['total_amount']) * 100));
+        $desc = 'Higoffe Order #' . $orderId . ' — ' . ($order['cafe_name'] ?? 'Café');
+
+        // 1. Create Payment Intent
+        $intentRes = self::request('POST', 'https://api.paymongo.com/v1/payment_intents', [
+            'data' => [
+                'attributes' => [
+                    'amount' => $amountCentavos,
+                    'payment_method_allowed' => ['qrph'],
+                    'payment_method_options' => ['card' => ['request_three_d_secure' => 'any']],
+                    'currency' => 'PHP',
+                    'capture_type' => 'automatic',
+                    'description' => $desc,
+                    'metadata' => ['order_id' => (string) $orderId],
+                ],
+            ],
+        ]);
+        if (!$intentRes['ok']) {
+            return $intentRes;
+        }
+        $intentId = (string) ($intentRes['data']['id'] ?? '');
+        if ($intentId === '') {
+            return ['ok' => false, 'error' => 'Failed to create PayMongo Payment Intent.'];
+        }
+
+        // 2. Create QR Ph Payment Method
+        $pmRes = self::request('POST', 'https://api.paymongo.com/v1/payment_methods', [
+            'data' => [
+                'attributes' => [
+                    'type' => 'qrph',
+                ],
+            ],
+        ]);
+        if (!$pmRes['ok']) {
+            return $pmRes;
+        }
+        $pmId = (string) ($pmRes['data']['id'] ?? '');
+        if ($pmId === '') {
+            return ['ok' => false, 'error' => 'Failed to create QR Ph payment method.'];
+        }
+
+        // 3. Attach Payment Method to Intent -> returns base64 QR image in next_action.code.image_url
+        $attachRes = self::request('POST', 'https://api.paymongo.com/v1/payment_intents/' . rawurlencode($intentId) . '/attach', [
+            'data' => [
+                'attributes' => [
+                    'payment_method' => $pmId,
+                ],
+            ],
+        ]);
+        if (!$attachRes['ok']) {
+            return $attachRes;
+        }
+
+        $imageUrl = (string) ($attachRes['data']['attributes']['next_action']['code']['image_url'] ?? '');
+        if ($imageUrl === '') {
+            return ['ok' => false, 'error' => 'PayMongo did not return a QR Ph image.'];
+        }
+
+        return [
+            'ok' => true,
+            'intent_id' => $intentId,
+            'qr_image' => $imageUrl,
+        ];
+    }
+
+    public static function getPaymentIntent(string $intentId): array {
+        return self::request('GET', 'https://api.paymongo.com/v1/payment_intents/' . rawurlencode($intentId));
+    }
+
     public static function verifyWebhookSignature(string $rawBody, string $sigHeader): bool {
         $secret = self::webhookSecret();
         if ($secret === '' || $sigHeader === '') {

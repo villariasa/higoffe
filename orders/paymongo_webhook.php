@@ -19,7 +19,7 @@ if (PayMongo::webhookSecret() !== '' && !PayMongo::verifyWebhookSignature($rawBo
 $event = json_decode($rawBody, true);
 $eventType = (string) ($event['data']['attributes']['type'] ?? '');
 
-if ($eventType === 'checkout_session.payment.paid') {
+if ($eventType === 'checkout_session.payment.paid' || $eventType === 'payment.paid') {
     $resource = $event['data']['attributes']['data']['attributes'] ?? [];
     $order_id = (int) ($resource['metadata']['order_id'] ?? 0);
 
@@ -29,10 +29,11 @@ if ($eventType === 'checkout_session.payment.paid') {
         $order = $orderModel->getById($order_id);
         if ($order && $orderModel->confirmOnlinePayment($order_id)) {
             $messageModel = new Message($pdo);
+            $label = $eventType === 'payment.paid' ? 'Online payment confirmed via QR Ph.' : 'Online payment confirmed via PayMongo.';
             $messageModel->createSystem(
                 (int) $order['conversation_id'],
                 (int) $order['customer_user_id'],
-                'Online payment confirmed via PayMongo.'
+                $label
             );
         }
     }

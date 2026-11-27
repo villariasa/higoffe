@@ -92,12 +92,70 @@ require_once __DIR__ . '/../config/PayMongo.php';
                 </p>
             <?php endif; ?>
             <?php if (PayMongo::isConfigured()): ?>
-                <form method="post" action="/orders/paymongo_checkout.php" class="mb-4">
-                    <input type="hidden" name="order_id" value="<?= (int) $order_id ?>">
-                    <button type="submit" class="w-full rounded-xl bg-stone-900 py-2.5 text-sm font-bold text-white transition hover:bg-stone-800 active:opacity-80">
-                        Pay online (GCash / Maya / QR Ph / Card)
+                <div id="higoffe-qrph-box-<?= (int) $order_id ?>" class="mb-4 space-y-2.5">
+                    <button
+                        type="button"
+                        id="higoffe-qrph-btn-<?= (int) $order_id ?>"
+                        class="w-full rounded-xl bg-stone-900 py-2.5 text-sm font-bold text-white transition hover:bg-stone-800 active:opacity-80 disabled:opacity-50"
+                    >
+                        Pay via QR Ph (GCash / Maya / Bank)
                     </button>
-                </form>
+                    <div id="higoffe-qrph-panel-<?= (int) $order_id ?>" class="hidden rounded-xl border border-stone-200 bg-stone-50 p-4 text-center">
+                        <p class="text-xs font-bold uppercase tracking-wide text-stone-500">Scan to pay &#8369;<?= number_format((float) $order['total_amount'], 2) ?></p>
+                        <img id="higoffe-qrph-img-<?= (int) $order_id ?>" src="" alt="QR Ph Code" class="mx-auto mt-3 h-52 w-52 rounded-lg border border-stone-200 bg-white p-2 object-contain" />
+                        <p class="mt-2.5 text-[11px] text-stone-500">Open GCash, Maya, or your banking app and scan this QR Ph code. Waiting for payment confirmation...</p>
+                    </div>
+                    <p id="higoffe-qrph-err-<?= (int) $order_id ?>" class="hidden rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-600"></p>
+                </div>
+                <script>
+                (function () {
+                    var oid = <?= (int) $order_id ?>;
+                    var btn = document.getElementById('higoffe-qrph-btn-' + oid);
+                    var panel = document.getElementById('higoffe-qrph-panel-' + oid);
+                    var img = document.getElementById('higoffe-qrph-img-' + oid);
+                    var errBox = document.getElementById('higoffe-qrph-err-' + oid);
+                    if (!btn || btn.dataset.bound) return;
+                    btn.dataset.bound = '1';
+                    var pollTimer = null;
+
+                    btn.addEventListener('click', function () {
+                        errBox.classList.add('hidden');
+                        btn.disabled = true;
+                        btn.textContent = 'Generating QR Ph...';
+                        var fd = new FormData();
+                        fd.append('order_id', String(oid));
+                        fetch('/orders/paymongo_qr.php', { method: 'POST', body: fd })
+                            .then(function (r) { return r.json(); })
+                            .then(function (data) {
+                                if (!data.ok || !data.qr_image) {
+                                    throw new Error(data.error || 'Could not generate QR Ph code.');
+                                }
+                                img.src = data.qr_image;
+                                panel.classList.remove('hidden');
+                                btn.classList.add('hidden');
+                                if (!pollTimer) {
+                                    pollTimer = setInterval(function () {
+                                        fetch('/orders/paymongo_poll.php?id=' + oid)
+                                            .then(function (r) { return r.json(); })
+                                            .then(function (p) {
+                                                if (p.paid) {
+                                                    clearInterval(pollTimer);
+                                                    window.location.href = '/orders/view.php?id=' + oid;
+                                                }
+                                            })
+                                            .catch(function () {});
+                                    }, 3000);
+                                }
+                            })
+                            .catch(function (e) {
+                                btn.disabled = false;
+                                btn.textContent = 'Pay via QR Ph (GCash / Maya / Bank)';
+                                errBox.textContent = e.message || 'Payment error.';
+                                errBox.classList.remove('hidden');
+                            });
+                    });
+                })();
+                </script>
                 <div class="relative mb-4 flex items-center">
                     <div class="flex-grow border-t border-stone-200"></div>
                     <span class="mx-3 shrink text-[11px] font-semibold uppercase tracking-wide text-stone-400">or upload proof</span>
